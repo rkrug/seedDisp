@@ -1,8 +1,8 @@
 Package: seedDisp
 Type: Package
 Title: Dispersal of seed routines
-Version: 0.3-0
-Date: 2011-08-04_14-55
+Version: 0.4-13
+Date: 2011-08-04_15-09
 Author: Rainer M. Krug
 Maintainer: Rainer M Krug <Rainer@krugs.de>
 Description: Collection of different seed dispersal routines.

@@ -1,6 +1,6 @@
 MAINVERSION <- 0
-SVNVERSION <- "3"
-SVNSTATE <- 0
+SVNVERSION <- "4"
+SVNSTATE <- 13
 ##' Disperses seeds from a seed \code{matrix} by using a
 ##' 2 dimensional dispersal \code{matrix}
 ##'

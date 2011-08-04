@@ -734,11 +734,19 @@ svn update
 
 - At the end of a day's work commit the changes
 
-#+begin_src sh :results output
-svn commit  -m "edits"
+#+begin_src sh :results output :var TANGLED=(org-babel-tangle)
+  echo $TANGLED
+  #svn commit  -m "edits"
 #+end_src
 
 #+results:
+: Sending        .
+: Sending        disp.org
+: Sending        pkg/DESCRIPTION
+: Sending        pkg/R/windDisp.R
+: Sending        postTangleScript.sh
+: Transmitting file data ....
+: Committed revision 4.
 
 : #+begin_src sh :results output
 : svn commit  -m "edits"
