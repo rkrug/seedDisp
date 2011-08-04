@@ -1,0 +1,12 @@
+Package: seedDisp
+Type: Package
+Title: Dispersal of seed routines
+Version: 0.9
+Date: 2011-06-08
+Author: Rainer M. Krug
+Maintainer: Rainer M Krug <Rainer@krugs.de>
+Description: Collection of different seed dispersal routines.
+License: GPL-3
+LazyLoad: yes
+Depends: Rcpp (>= 0.9.4)
+LinkingTo: Rcpp

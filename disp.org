@@ -1,0 +1,743 @@
+#+TITLE:     seedDisp.org
+#+AUTHOR:    Charles C. Berry    
+#+EMAIL:     cberry@tajo.ucsd.edu
+#+DATE:      2010-12-08 Thur
+#+DESCRIPTION: R Package Development Helpers
+
+#+KEYWORDS: 
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:nil skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:   
+#+LINK_HOME: 
+
+#+TODO: TODO OPTIMIZE TOGET COMPLETE WAIT VERIFY CHECK CODE DOCUMENTATION | DONE RECEIVED CANCELD 
+
+#+STARTUP: hidestars hideblocks
+#+DRAWERS: HIDDEN PROPERTIES STATE CONFIG BABEL OUTPUT LATEXHEADER HTMLHEADER
+#+STARTUP: nohidestars hideblocks
+
+:BABEL:
+#+BABEL: :padline no
+#+BABEL: :comments no
+#+BABEL: :var MAINVERSION=0
+ #+BABEL: :var SVNVERSION=(vc-working-revision (buffer-file-name)) 
+#+BABEL: :var SVNVERSION=9
+:END:
+
+:HTMLHEADER:
+#+begin_html
+  <div id="subtitle" style="float: center; text-align: center;">
+  <p>
+Org-babel support for building 
+  <a href="http://www.r-project.org/">R</a> packages
+  </p>
+  <p>
+  <a href="http://www.r-project.org/">
+  <img src="http://www.r-project.org/Rlogo.jpg"/>
+  </a>
+  </p>
+  </div>
+#+end_html
+:END:
+
+* Internal configurations                                          :noexport:
+** Evaluate to run post tangle script
+#+begin_src emacs-lisp :results silent :tangle no :exports none
+  (add-hook 'org-babel-post-tangle-hook
+            (
+             lambda () 
+                    (call-process-shell-command "./postTangleScript.sh" nil 0 nil)
+  ;;              (async-shell-command "./postTangleScript.sh")
+  ;;              (ess-load-file (save-window-excursion (replace-regexp-in-string ".org" ".R" buffer-file-name)))))
+  ;;              (ess-load-file "nsa.R")))
+  ;;              (ess-load-file "spreadSim.R")
+                    )
+            )
+#+end_src
+
+** Post tangle script
+#+begin_src sh :tangle postTangleScript.sh :var VER=(vc-working-revision (buffer-file-name)) :var STATE=(vc-state (or (buffer-file-name) org-current-export-file))
+  sed -i s/MAINVERSION/$MAINVERSION/ ./pkg/DESCRIPTION
+  sed -i s/SVNVERSION/$SVNVERSION/ ./pkg/DESCRIPTION
+#+end_src
+
+
+* Document Purpose 
+
+This document contains  
+- tools useful for writing R extensions called /packages/
+- source code to create a simple R package.
+
+* R packages
+
+- The [[http://www.r-project.org][R language and environment]] for statistical computation and
+  graphics has a powerful system for developing and distributing
+  software enhancements and datasets called /packages/.
+- A vast archive of such packages ---called [[http://cran.r-project.org/][CRAN]] --- is available.
+- Users can create their own packages by following instructions in
+  [[http://cran.r-project.org/doc/manuals/R-exts.html][Writing R Extensions]].
+
+* Some notes on this document and =org-babel=
+
+- This document provides tools for R package development using org-mode.
+
+- There are two somewhat contrary philosphies about how R packages are
+  managed using =org-babel=. 
+  - One camp holds that all of the code for a package should be kept
+    in one master =*.org= document, which when tangled produces the source
+    directory files needed. The =.org= document also holds notes, utility
+    functions, navigation tools, and code snippets. A very simple R
+    package is included below, and it can be checked, installed, and
+    run from this =.org= document.
+  - The other camp leaves the =R= and =Rd= code and other package
+    files in the package directory subfolders and edits them
+    there. 
+  - The tools shown here support either approach.
+
+- Some introductory tips at [[file:languages/ob-doc-R.org][ob-doc-R]] show how to enable full editing
+  support for R code with ESS (http://ess.r-project.org/).
+
+- This document is to be put in the top level source directory of an R
+ package (i.e. at the same level as the DESCRIPTION file). To try it
+  out using the built in package, create a fresh diretory named
+  =countRows= and just put it there.
+
+- version control blocks here use svn calls, and you may need to
+  replace these with your own.
+
+- =#+begin_src sh ... #+end_src= shell blocks work on systems that
+  support unix-like shells. On Windows systems these blocks would
+  likely need to be changed.
+
+* Typical Workflow
+ - [[http://repo.or.cz/w/Worg.git/blob_plain/HEAD:/org-contrib/babel/examples/Rpackage.org][Download]] the =.org= version of this document
+ - Create a package directory (naming it like the package is convenient)
+  - Copy the =.org= version of this document into that directory
+  - Move point to the  =set up .Rbuildignore= headline and execute it
+    (see [[howrun][1]])  
+  - Create some package files, *or* create src blocks at outlined in
+    this document and run =org-babel-tangle= to create the package
+    files.
+  - Repeat these  steps:
+    - Either 
+      - INSTALL the package[[howrun][1]] or
+      - check the package[[howrun][1]]
+      - Load some code (i.e. for a function) using ESS and try it out.
+      - Inspect a formatted help page
+    - Edit the code. Retangle as, and if, needed.
+  - Once the package is ready, build it or INSTALL it to a permanent
+    location
+# <<howrun>> 
+:    1. moving point to the corresponding headline, then
+:       typing 'C-c C-v C-s y' or 
+:       'M-x org-babel-execute-subtree'
+:       will execute each tool.
+
+* R procedures
+** check package
+
+- Environment variables like these may be added in the next src block:
+   - =export R_LIBS=Rlib=
+   - =export R_ARCH=x86_64=
+
+#+begin_src sh :results output
+CWD=`pwd`
+R CMD check seedDisp | sed 's/^*/ */'
+#+end_src
+
+#+results:
+#+begin_example
+ * using log directory ‘/home/rkrug/Documents/Projects/R-Packages/disp/disp.Rcheck’
+ * using R version 2.13.1 (2011-07-08)
+ * using platform: i686-pc-linux-gnu (32-bit)
+ * using session charset: UTF-8
+ * checking for file ‘disp/DESCRIPTION’ ... OK
+ * checking extension type ... Package
+ * this is package ‘disp’ version ‘0.9’
+ * checking package name space information ... OK
+ * checking package dependencies ... OK
+ * checking if this is a source package ... OK
+ * checking for executable files ... OK
+ * checking whether package ‘disp’ can be installed ... ERROR
+Installation failed.
+See ‘/home/rkrug/Documents/Projects/R-Packages/disp/disp.Rcheck/00install.out’ for details.
+#+end_example
+
+
+
+** INSTALL package
+
+- customize the =rckopts= variable, possibly "rckopts="
+- Variables may be also added next src block
+  -- =export R_ARCH=x86_64=
+
+#+begin_src sh :results output :var rckopts="--library=./Rlib"
+R CMD INSTALL $rckopts $CWD
+#+end_src
+
+#+results:
+: make: Nothing to be done for `all'.
+
+: #+begin_src sh :results output :var rckopts="--library=./Rlib"
+: CWD=`pwd`
+: cd ..; R CMD INSTALL $rckopts $CWD
+: #+end_src
+
+** build package
+
+#+begin_src sh :results output
+R CMD build seedDisp
+#+end_src
+
+#+results:
+: * checking for file ‘disp/DESCRIPTION’ ... OK
+: * preparing ‘disp’:
+: * checking DESCRIPTION meta-information ... OK
+: * cleaning src
+: * checking for LF line-endings in source and make files
+: * checking for empty or unneeded directories
+: * building ‘disp_0.9.tar.gz’
+
+
+** help pages
+
+- The src block adds enough asterisks to the line listing each
+  filename to turn it into a headline at the next level down. This is
+  helpful if you have a lot of help pages and want to fold them up for
+  browsing.
+
+#+begin_src R :results output :var hdlev=(car (org-heading-components))
+  linestart <- paste( c( "\n", rep('*', hdlev+1 ) ), collapse='')
+  rd.files <- Sys.glob("man/*.Rd")
+  for ( ird in rd.files ){
+    hlp.txt <- capture.output(tools:::Rd2txt( ird ) )
+    hlp.txt <- gsub( "_\b","", hlp.txt)
+    headline <- paste( linestart, ird ,'\n' )
+    cat( headline, hlp.txt , sep='\n')
+  }
+#+end_src
+
+: #+begin_src R :results output :var hdlev=(car (org-heading-components))
+:   linestart <- paste( c( "\n", rep('*', hdlev+1 ) ), collapse='')
+:   rd.files <- Sys.glob("man/*.Rd")
+:   for ( ird in rd.files ){
+:     hlp.txt <- capture.output(tools:::Rd2txt( ird ) )
+:     hlp.txt <- gsub( "_\b","", hlp.txt)
+:     headline <- paste( linestart, ird ,'\n' )
+:     cat( headline, hlp.txt , sep='\n')
+:   }
+: #+end_src
+  
+** load library
+
+#+begin_src R :session :results output :var libname=(file-name-directory buffer-file-name)
+## customize the next line as needed: 
+.libPaths(new = file.path(getwd(),"Rlib") )
+require( basename(libname), character.only=TRUE)
+#+end_src
+
+#+results:
+
+- this loads the library into an R session
+- customize or delete the =.libPaths= line as desired 
+
+
+: #+begin_src R :session :var libname=(file-name-directory buffer-file-name)
+: .libPaths(new = file.path(getwd(),"Rlib") )
+: require( basename(libname), character.only=TRUE)
+: #+end_src
+
+** grep require( 
+
+- if you keep all your source code in this =.org= document, then you do not
+  need to do this - instead just type =C-s require(=
+- list package dependencies that might need to be dealt with
+
+#+begin_src sh :results output
+grep 'require(' R/*
+#+end_src
+
+: #+begin_src sh :results output
+: grep 'require(' R/*
+: #+end_src
+
+** set up .Rbuildignore and man, R, and Rlib directories
+
+- This document sits in the top level source directory. So, ignore it
+  and its offspring when checking, installing and building.
+- List all files to ignore under =#+results: rbi=  (including this
+  one!). Regular expressions are allowed.
+- Rlib is optional. If you want to INSTALL in the system directory,
+  you own't need it.
+
+: #+results: rbi
+#+results: rbi
+: Rpackage.*
+
+Only need to run this once (unless you add more ignorable files).
+
+#+begin_src R :results output silent :var rbld=rbi 
+dir.create("./seedDisp")
+cat(rbld,'\n', file="./pkg/.Rbuildignore")
+dir.create("./pkg/man")
+dir.create("./pkg/R")
+dir.create("./pkg/src")
+dir.create("./Rlib")
+#+end_src
+
+: #+begin_src R :results output silent :var rbld=rbi 
+: cat(rbld,'\n', file=".Rbuildignore")
+: dir.create("man")
+: dir.create("R")
+: dir.create("../Rlib")
+: #+end_src
+
+* Package
+
+Package specific notes and blocks go here. It is a good idea to have
+several second level headlines --- possibly including the package code
+--- to group things by topic/idea, then a third level headline for
+almost every src block and TODO item.
+
+** Package structure and src languages                            :noexport:
+
+- The top level directory may contain these files (and others):
+
+| filename    | filetype      |
+|-------------+---------------|
+| INDEX       | text          |
+| NAMESPACE   | R-like script |
+| configure   | Bourne shell  |
+| cleanup     | Bourne shell  |
+| LICENSE     | text          |
+| LICENCE     | text          |
+| COPYING     | text          |
+| NEWS        | text          |
+| DESCRIPTION | [[http://www.debian.org/doc/debian-policy/ch-controlfields.html][DCF]]           |
+|-------------+---------------|
+
+
+ 
+   and subdirectories
+| direname | types of files                                   |
+|----------+--------------------------------------------------|
+| R        | R                                                |
+| data     | various                                          |
+| demo     | R                                                |
+| exec     | various                                          |
+| inst     | various                                          |
+| man      | Rd                                               |
+| po       | poEdit                                           |
+| src      | .c, .cc or .cpp, .f, .f90, .f95, .m, .mm, .M, .h |
+| tests    | R, Rout                                          |
+|----------+--------------------------------------------------|
+|          |                                                  |
+   
+** seedDisp package
+
+- This example illustrates how to use the =.org= document as the source code
+  master. By navigating to the =INSTALL package= headline and entering
+  =C-c C-v C-s y=, the INSTALL command is run. Likewise for =check
+  package=, =help pages=, and the other tools.
+
+- The =countRows= package implements a simple, but quick way to count the rows of
+  a =data.frame=. It is akin to =sort | uniq -c= in a Unix-alike shell.
+
+- The package is based on a function that was posted in this [[https://stat.ethz.ch/pipermail/r-help/2008-January/151489.html][reply]] to
+  a [[https://stat.ethz.ch/pipermail/r-help/2008-January/151372.html][query]] on the R-help list.
+  
+*** The DESCRIPTION File
+
+- The DESCRIPTION file is obligatory
+- It follows Debian Control File format.
+- Required and optional fields are described in [[http://cran.r-project.org/doc/manuals/R-exts.html][Writing R Extensions]].
+
+#+begin_src R :tangle ./pkg/DESCRIPTION :shebang :padline no :no-expand :comments no
+  Package: seedDisp
+  Type: Package
+  Title: Dispersal of seed routines
+  Version: MAINVERSION.SVNVERSION
+  Date: 2011-06-08
+  Author: Rainer M. Krug
+  Maintainer: Rainer M Krug <Rainer@krugs.de>
+  Description: Collection of different seed dispersal routines.
+  License: GPL-3
+  LazyLoad: yes
+  Depends: Rcpp (>= 0.9.4)
+  LinkingTo: Rcpp
+  
+#+end_src
+
+*** The NAMESPACE File
+#+begin_src R :tangle ./pkg/NAMESPACE :shebang :padline no :no-expand :comments no
+  useDynLib(seedDisp)
+  exportPattern("^[[:alpha:]]+")
+#+end_src
+
+*** R code
+
+- Each =#+begin_src R= block defines one or more functions. 
+- The =:tangle= header tells where to place the code
+
+****  windDisp
+#+begin_src R :eval nil :tangle ./pkg/R/windDisp.R
+  ##' Disperses seeds from a seed \code{matrix} by using a
+  ##' 2 dimensional dispersal \code{matrix}
+  ##'
+  ##' .. content for \details{} ..
+  ##' @title Dispersal of seeds by wind
+  ##' @param SD2D matrix defining the 2D seed dispersal kernel 
+  ##' @param SEEDS matrix specifying the number of seeds to be dispersed
+  ##' @param MASK matrix defining the area in which processing takes place (!is.na(MASK))
+  ##' @return Matrix of same size as SEEDS containing the dispersed seeds
+  ##' @author Rainer M Krug
+  windDisp <- function(SD2D, SEEDS, MASK) {
+    ## Calculate size parameter of sd2D
+    dx2 <- (ncol(SD2D) - 1)
+    dy2 <- (nrow(SD2D) - 1)
+    dx <- dx2 / 2
+    dy <- dy2 / 2
+    ## buffer for dispersal into cells at the edge
+    buffer <- matrix(NA, nrow=nrow(SEEDS), ncol=dx)
+    SEEDS <- cbind(buffer, SEEDS, buffer)
+    buffer <- matrix(NA, ncol=ncol(SEEDS), nrow=dy)
+    SEEDS <- rbind(buffer, SEEDS, buffer)
+    ## call C++ function
+    return(
+           .Call(
+                 "windDispCpp",
+                 dx2,
+                 dy2,
+                 SD2D,
+                 SEEDS,
+                 MASK
+                 )
+           )
+  }
+#+end_src
+
+*** src files
+:PROPERTIES:
+:no-expand: true
+:END:
+**** Makevars
+#+begin_src sh :results silent :tangle ./pkg/src/Makevars :eval nil
+  ## Use the R_HOME indirection to support installations of multiple R version
+  PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"`
+  
+  ## As an alternative, one can also add this code in a file 'configure'
+  ##
+  ##    PKG_LIBS=`${R_HOME}/bin/Rscript -e "Rcpp:::LdFlags()"`
+  ## 
+  ##    sed -e "s|@PKG_LIBS@|${PKG_LIBS}|" \
+  ##        src/Makevars.in > src/Makevars
+  ## 
+  ## which together with the following file 'src/Makevars.in'
+  ##
+  ##    PKG_LIBS = @PKG_LIBS@
+  ##
+  ## can be used to create src/Makevars dynamically. This scheme is more
+  ## powerful and can be expanded to also check for and link with other
+  ## libraries.  It should be complemented by a file 'cleanup'
+  ##
+  ##    rm src/Makevars
+  ##
+  ## which removes the autogenerated file src/Makevars. 
+  ##
+  ## Of course, autoconf can also be used to write configure files. This is
+  ## done by a number of packages, but recommended only for more advanced users
+  ## comfortable with autoconf and its related tools.
+  
+  
+#+end_src
+
+**** Makevars.win
+#+begin_src sh :results silent :tangle ./pkg/src/Makevars.win :eval nil
+  ## Use the R_HOME indirection to support installations of multiple R version
+  PKG_LIBS = $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "Rcpp:::LdFlags()")
+#+end_src
+**** windDispCpp.h
+#+begin_src c++ :tangle ./pkg/src/windDispCpp.h
+  #ifndef _test_WINDDISPCPP_H
+  #define _test_WINDDISPCPP_H
+  
+  #include <Rcpp.h>
+  
+  /*
+   * note : RcppExport is an alias to `extern "C"` defined by Rcpp.
+   *
+   * It gives C calling convention to the rcpp_hello_world function so that 
+   * it can be called from .Call in R. Otherwise, the C++ compiler mangles the 
+   * name of the function and .Call can't find it.
+   *
+   * It is only useful to use RcppExport when the function is intended to be called
+   * by .Call. See the thread http://thread.gmane.org/gmane.comp.lang.r.rcpp/649/focus=672
+   * on Rcpp-devel for a misuse of RcppExport
+   */
+  
+  RcppExport SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK) ;
+  
+  // definition
+  
+  #endif
+  
+#+end_src
+
+**** windDispCpp.cpp
+#+BEGIN_SRC c++ :tangle ./pkg/src/windDispCpp.cpp
+  #include "windDispCpp.h"
+  
+  SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
+    using namespace Rcpp;
+  
+    // The input parameter  
+    int dx2 = as<int>(DX2); // by reference or value?
+    int dy2 = as<int>(DY2);
+    NumericVector sd2D (SD2D); // by reference!
+    IntegerMatrix seeds (SEEDS);
+    IntegerMatrix mask (MASK);
+  
+    // result vector
+    IntegerMatrix dispSeeds = clone<IntegerMatrix>(mask);
+  
+    // internal variables
+    IntegerVector s (sd2D.size());
+    RNGScope scope;                 // N.B. Needed when calling random number generators
+  
+    int res; 
+    int nc = dispSeeds.ncol();
+    int nr = dispSeeds.nrow();
+    
+    // BEGIN loop over seeds grid ("moving")
+    for( int y=0; y < nc; y++ ){
+      for( int x=0; x < nr; x++ ){
+        // BEGIN loop over sd2D ("window")
+        if ( dispSeeds(x, y) >= 0 ) {
+          int indS = 0;
+          for( int xS=x; xS <= x + dx2; xS++ )
+            for( int yS=y; yS <= y + dy2; yS++, indS++ )
+              s[indS]=seeds(xS, yS);
+          res = 0;
+          for( int i=0; i<s.size(); i++ ){
+            if (s[i]>0 && sd2D[i]>0) {
+              res += (int) ::Rf_rbinom((double)(s[i]), sd2D[i]);
+            }
+          }
+          dispSeeds(x, y) = res;
+        }
+      }
+    }
+    // END loop over seeds
+  
+    return wrap( dispSeeds );
+  }
+#+END_SRC
+
+
+*** Rd help page markup
+
+- There is usually one =#+begin_src Rd= block for each help page
+- Usually one page covers the package as a whole and other cover the
+  functions and datasets it includes.
+
+**** windDisp
+#+begin_src Rd :eval nil :tangle ./pkg/man/windDisp.Rd
+  \name{windDisp}
+  \alias{windDisp}
+  \title{ Dispersal of seeds by wind }
+  \description{ Disperses seeds from a seed \code{matrix} by using a
+    2 dimensional dispersal \code{matrix} }
+  \usage{ windDisp(DX2, DY2, SD2D, SEEDS, MASK) }
+  \arguments{
+    \item{SD2D}{
+      A \code{matrix} containing the 2 dimensional seed dispersal kernel
+    }
+    \item{SEEDS}{
+      A \code{matrix} containing the seeds to be dispersed
+    }
+    \item{MASK}{
+      A \code{matrix} containing a mask of seed cells to be processed 
+      - 1  : processing
+      - NA : do not process
+    }
+  }
+  \details{
+  }
+  \value{
+    A \code{matrix} of the same size as SEEDS containing the dispersed seeds 
+  }
+  \author{  Rainer M Krug <Rainer@krugs.de>  }
+  \examples{
+  }
+  \keyword{ manip }
+#+end_src
+
+**** dispPackage
+#+begin_src Rd :eval nil :tangle ./pkg/man/disp-package.Rd
+  \name{seedDisp-package}
+  \alias{seedDisp-package}
+  \alias{seedDisp}
+  \docType{package}
+  \title{Seed dispersal routines }
+  \description{  Disperses seeds by using different routines }
+  \details{
+  \tabular{ll}{
+  Package: \tab seedDisp\cr
+  Type: \tab Package\cr
+  Version: \tab 0.9\cr
+  Date: \tab 2010-12-08\cr
+  License: \tab GPL-3\cr
+  LazyLoad: \tab yes\cr
+  }
+  
+  There is only one function in this package, windDisp
+  }
+  \author{
+  Rainer M Krug \email{Rainer@krugs.de}
+  }
+  \keyword{ package }
+#+end_src
+
+*** Tests and Tryouts
+:PROPERTIES:
+:tangle: no
+:END:
+- As part of developing a package one must try out some code and
+  perhaps develop some tests to be sure it does what it is supposed to
+  do.
+- Here is an easy-to-read tryout of the =count.rows= function:
+- You may need to edit or delete the =.libPaths= call to suit your
+  setup
+
+: #+begin_src R :session :results output :exports both
+:  .libPaths( new = "./Rlib")
+:   require( countRows ) 
+:   simple.df <- data.frame( diag(1:4), row.names=letters[ 1:4 ])
+:   repeated.df <- simple.df[ rep( 1:4, 4:1 ), ]
+:   simple.df
+:   count.rows( repeated.df )  
+: #+end_src
+
+#+begin_src R :session :results output :exports results
+  .libPaths( new = "./Rlib")
+  require( countRows ) 
+  simple.df <- data.frame( diag(1:4), row.names=letters[ 1:4 ])
+  repeated.df <- simple.df[ rep( 1:4, 4:1 ), ]
+  simple.df
+  count.rows( repeated.df )  
+#+end_src
+
+#+results:
+#+begin_example
+Loading required package: countRows
+  X1 X2 X3 X4
+a  1  0  0  0
+b  0  2  0  0
+c  0  0  3  0
+d  0  0  0  4
+  counts X1 X2 X3 X4
+d      1  0  0  0  4
+c      2  0  0  3  0
+b      3  0  2  0  0
+a      4  1  0  0  0
+#+end_example
+
+* Version Control, Navigation, and setup tasks
+** list files for convenient navigation 
+
+- Use this if you do not use the =.org= document to keep the master for the
+ source code
+- It is useful when in a terminal window on a remote machine, and speedbar
+  is not a good option. =C-u C-c C-o= or =Mouse-1= will open the file
+  point is on.
+
+#+begin_src R :results output verbatim :var cwd="."
+  cat(paste("file:",list.files(cwd,".*",recursive=TRUE),sep=''),sep='\n')
+#+end_src
+
+: #+begin_src R :results output verbatim :var cwd="."
+:   cat(paste("file:",list.files(cwd,".*",recursive=TRUE),sep=''),sep='\n')
+: #+end_src
+
+** Speedbar navigation
+
+- Use this if you do not use the =.org= document to keep the master for the
+  source code
+- Make speedbar stick to the package source directory by typing 't' in
+  its frame after executing this block:
+
+#+begin_src emacs-lisp :results output silent
+  (require 'speedbar)
+  (ess-S-initialize-speedbar)
+  ;; uncomment this line if it isn't in ~/.emacs:
+  ;; (add-to-list 'auto-mode-alist '("\\.Rd\\'" . Rd-mode))
+  (speedbar-add-supported-extension ".Rd")
+  (speedbar-add-supported-extension "NAMESPACE")
+  (speedbar-add-supported-extension "DESCRIPTION")
+  (speedbar 1)
+#+end_src
+
+
+
+: #+begin_src emacs-lisp :results output silent
+:   (require 'speedbar)
+:   (ess-S-initialize-speedbar)
+:   ;; uncomment this line if it isn't in ~/.emacs:
+:   ;; (add-to-list 'auto-mode-alist '("\\.Rd\\'" . Rd-mode))
+:   (speedbar-add-supported-extension ".Rd")
+:   (speedbar-add-supported-extension "NAMESPACE")
+:   (speedbar-add-supported-extension "DESCRIPTION")
+:   (speedbar 1)
+: #+end_src
+
+** Version Control
+
+- If you don't use svn, substitute the relevant version control
+  command in each block in this section
+
+- Each of these can be run by putting point on the headline then
+  keying =C-c C-v C-s y=
+
+- Possibly add --username=<> --password=<> to the svn commands
+
+*** svn list 
+
+- Show what files are version controlled
+
+#+begin_src sh :results output
+svn list --recursive 
+#+end_src
+
+: #+begin_src sh :results output
+: svn list --recursive 
+: #+end_src
+
+*** svn update 
+
+- Use at the start of each session to sync changes from other machines
+
+#+begin_src sh :results output
+svn update 
+#+end_src
+
+: #+begin_src sh :results output
+: svn update 
+: #+end_src
+
+*** svn commit
+
+- At the end of a day's work commit the changes
+
+#+begin_src sh :results output
+svn commit  -m "edits"
+#+end_src
+
+: #+begin_src sh :results output
+: svn commit  -m "edits"
+: #+end_src
+
+
