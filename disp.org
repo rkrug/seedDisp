@@ -738,16 +738,11 @@ svn update
 svn commit  -m "edits"
 #+end_src
 
+#+results:
+
 : #+begin_src sh :results output
 : svn commit  -m "edits"
 : #+end_src
 
 
-
-#+begin_src elisp
-  (if (eq (vc-state (or (buffer-file-name) org-current-export-file)) 'up-to-date) 0 13)
-#+end_src
-
-#+results:
-: 1
 
