@@ -24,8 +24,8 @@
 #+BABEL: :padline no
 #+BABEL: :comments no
 #+BABEL: :var MAINVERSION=0
- #+BABEL: :var SVNVERSION=(vc-working-revision (buffer-file-name)) 
-#+BABEL: :var SVNVERSION=9
+#+BABEL: :var SVNVERSION=(vc-working-revision (buffer-file-name))
+#+BABEL: :var SVNSTATE=(if (eq (vc-state (or (buffer-file-name) org-current-export-file)) 'up-to-date) 0 13)
 :END:
 
 :HTMLHEADER:
@@ -63,6 +63,8 @@ Org-babel support for building
 #+begin_src sh :tangle postTangleScript.sh :var VER=(vc-working-revision (buffer-file-name)) :var STATE=(vc-state (or (buffer-file-name) org-current-export-file))
   sed -i s/MAINVERSION/$MAINVERSION/ ./pkg/DESCRIPTION
   sed -i s/SVNVERSION/$SVNVERSION/ ./pkg/DESCRIPTION
+  sed -i s/SVNSTATE/$SVNSTATE/ ./pkg/DESCRIPTION
+  sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./pkg/DESCRIPTION
 #+end_src
 
 
@@ -360,8 +362,8 @@ almost every src block and TODO item.
   Package: seedDisp
   Type: Package
   Title: Dispersal of seed routines
-  Version: MAINVERSION.SVNVERSION
-  Date: 2011-06-08
+  Version: MAINVERSION.SVNVERSION-SVNSTATE
+  Date: TODAYSDATE
   Author: Rainer M. Krug
   Maintainer: Rainer M Krug <Rainer@krugs.de>
   Description: Collection of different seed dispersal routines.
@@ -740,4 +742,12 @@ svn commit  -m "edits"
 : svn commit  -m "edits"
 : #+end_src
 
+
+
+#+begin_src elisp
+  (if (eq (vc-state (or (buffer-file-name) org-current-export-file)) 'up-to-date) 0 13)
+#+end_src
+
+#+results:
+: 1
 
