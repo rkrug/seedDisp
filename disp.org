@@ -60,12 +60,14 @@ Org-babel support for building
 #+end_src
 
 ** Post tangle script
-#+begin_src sh :tangle postTangleScript.sh :var VER=(vc-working-revision (buffer-file-name)) :var STATE=(vc-state (or (buffer-file-name) org-current-export-file))
+#+begin_src sh :tangle ./postTangleScript.sh :var VER=(vc-working-revision (buffer-file-name)) :var STATE=(vc-state (or (buffer-file-name) org-current-export-file))
   sed -i s/MAINVERSION/$MAINVERSION/ ./pkg/DESCRIPTION
   sed -i s/SVNVERSION/$SVNVERSION/ ./pkg/DESCRIPTION
   sed -i s/SVNSTATE/$SVNSTATE/ ./pkg/DESCRIPTION
   sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./pkg/DESCRIPTION
 #+end_src
+
+#+results:
 
 
 * Document Purpose 
@@ -279,6 +281,9 @@ grep 'require(' R/*
 : #+results: rbi
 #+results: rbi
 : Rpackage.*
+: SVNSTATE
+: MAINVERSION
+: SVNVERSION
 
 Only need to run this once (unless you add more ignorable files).
 
@@ -734,23 +739,29 @@ svn update
 
 - At the end of a day's work commit the changes
 
-#+begin_src sh :results output :var TANGLED=(org-babel-tangle)
-  echo $TANGLED
-  #svn commit  -m "edits"
+#+begin_src sh :results output :var TANGLED=(org-babel-tangle) :tangle no
+  echo "  l   w   b     fn"
+  wc $TANGLED
+  ./postTangleScript.sh
+  svn commit  -m "edits"
 #+end_src
 
 #+results:
-: Sending        .
-: Sending        disp.org
-: Sending        pkg/DESCRIPTION
-: Sending        pkg/R/windDisp.R
-: Sending        postTangleScript.sh
-: Transmitting file data ....
-: Committed revision 4.
+#+begin_example
+  l   w   b     fn
+  46  182 1257 ./pkg/src/windDispCpp.cpp
+  22  108  681 ./pkg/src/windDispCpp.h
+  22   56  468 ./pkg/man/disp-package.Rd
+  28  104  718 ./pkg/man/windDisp.Rd
+  36  166 1148 ./pkg/R/windDisp.R
+   2    2   51 ./pkg/NAMESPACE
+  12   39  323 ./pkg/DESCRIPTION
+   3   19  172 ./pkg/src/Makevars.win
+  26  147  960 ./pkg/src/Makevars
+  25   43  463 ./postTangleScript.sh
+ 222  866 6241 total
+#+end_example
 
-: #+begin_src sh :results output
-: svn commit  -m "edits"
-: #+end_src
 
 
 
