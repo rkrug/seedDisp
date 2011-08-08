@@ -760,6 +760,13 @@ svn update
   26  147  960 ./pkg/src/Makevars
   25   43  463 ./postTangleScript.sh
  222  866 6241 total
+Sending        disp.org
+Sending        pkg/.Rbuildignore
+Sending        pkg/DESCRIPTION
+Sending        pkg/R/windDisp.R
+Sending        postTangleScript.sh
+Transmitting file data .....
+Committed revision 6.
 #+end_example
 
 
