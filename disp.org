@@ -73,13 +73,10 @@ Org-babel support for building
   sed -i s/SVNSTATE/$SVNSTATE/ ./pkg/seedDisp-package.R
   sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./pkg/seedDisp-package.R
 
-  Rscript -e "library(roxygen);roxygenize('pkg', roxygen.dir='pkg', copy.package=FALSE, unlink.target=FALSE)"
+  Rscript -e "library(roxygen2);roxygenize('pkg', roxygen.dir='pkg', copy.package=FALSE, unlink.target=FALSE)"
 #+end_src
 
 #+results:
-: Writing windDisp to pkg/man/windDisp.Rd
-: Writing namespace directives to pkg/NAMESPACE 
-: Merging collate directive with pkg/DESCRIPTION to pkg/DESCRIPTION 
 
 
 * seedDisp package
@@ -99,7 +96,6 @@ Org-babel support for building
   ##' Using the Fermat primality test, pseudoprime checks for primes
   ##' probabilistically; the test is fooled every time by Carmichael
   ##'
-  ##' There is only one function in this package, windDisp
   ##' @docType package
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
   NULL
@@ -117,7 +113,7 @@ Org-babel support for building
   Description: Collection of different seed dispersal routines.
   License: GPL-3
   LazyLoad: yes
-  Depends: Rcpp (>= 0.9.4)
+  Depends: Rcpp, spgrass6
   LinkingTo: Rcpp
   
 #+end_src
@@ -125,10 +121,14 @@ Org-babel support for building
 ** NAMESPACE
 #+begin_src R :tangle ./pkg/NAMESPACE :shebang :padline no :no-expand :comments no
   useDynLib(seedDisp)
-  #+end_src
+  exportPattern("^[[:alpha:]]+")
+#+end_src
+
+#+results:
 
 ** R
-*** windDisp
+*** Wind dispersal
+**** windDisp
 #+begin_src R :eval nil :tangle ./pkg/R/windDisp.R :no-expand
   ##' Disperses seeds from a seed \code{matrix} by using a
   ##' 2 dimensional dispersal \code{matrix}
@@ -164,11 +164,353 @@ Org-babel support for building
                  SD2D,
                  SEEDS,
                  MASK,
-                 PACKAGE = "windDispCpp"
+                 PACKAGE = "seedDisp"
                  )
            )
   }
   
+#+end_src
+
+**** windDispGRASS
+#+begin_src R :eval nil :tangle ./pkg/R/windDispGRASS.R :no-expand
+  ##' Disperses seeds from a seed \code{matrix} by using a
+  ##' 2 dimensional dispersal \code{matrix}
+  ##' and doing the calculations based on raster in GRASS
+  ##'
+  ##' @usage windDisp(SD2D, input, output="windDispSeeds", overwrite=FALSE)
+  ##' @name windDispGRASS
+  ##' @title Dispersal of seeds by wind
+  ##' @param SD2D \code{matrix} defining the 2D seed dispersal kernel 
+  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
+  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @return \code{character} name of the output layer
+  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+  ##' @export 
+  ##' @callGraphPrimitives
+  windDispGRASS <- function(SD2D, input, output="windDispSeeds", overwrite=FALSE) {
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) ) {
+      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    } 
+  
+    seeds <- readRAST6(
+                       c(
+                         input,
+                         "MASK"
+                         ),
+                       NODATA=-1
+                       )
+    ## seeds.m <- sgdfToMatrix(seeds, 1)
+    seeds.m <- matrix(
+                    seeds[[1]],
+                    nrow=gridparameters(seeds)$cells.dim[1],
+                    ncol=gridparameters(seeds)$cells.dim[2])
+    ## mask.m <- sgdfToMatrix(seeds, 2)
+    mask.m <- matrix(
+                     seeds[[2]],
+                     nrow=gridparameters(seeds)$cells.dim[1],
+                     ncol=gridparameters(seeds)$cells.dim[2])
+  
+    dispSeeds.m <- windDisp(
+                            SD2D = SD2D,
+                            SEEDS = seeds.m,
+                            MASK = mask.m
+                            )
+  
+    seeds@data[[2]] <- as.vector(dispSeeds.m)
+    
+    mode(seeds[[2]]) <- "double"
+    ## seeds@proj4string <- parameter$proj4string
+    writeRAST6(
+               seeds,
+               output,
+               NODATA = -1,
+               zcol=2,
+               overwrite = overwrite
+               )
+    execGRASS(
+              "r.null",
+              parameters = list(
+                map  = output,
+                setnull = "0"
+                ),
+              ignore.stderr=!options("asmDebug")[[1]]
+              )
+    return(output)
+  }
+  
+#+end_src
+
+*** Local dispersal
+**** localDispGRASS
+#+begin_src R  :eval nil :tangle ./pkg/R/localDispGRASS.R :no-expand
+  ##' Locally disperse seeds from a seed layer using GRASS
+  ##' 
+  ##' @usage localDispGRASS(input, output, overwrite)
+  ##' @name localDispGRASS
+  ##' @title Dispersal of seeds locally, i.e. in surounding cells (half, evenly distributed)
+  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
+  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @return \code{character} name of the output layer
+  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+  ##' @export 
+  ##' @callGraphPrimitives
+  localDispGRASS <- function(input, output="localDispSeeds", overwrite=FALSE) {
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) ) {
+      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    } 
+    r.mapcalc <- function(...)
+      {
+        comm <- paste( "r.mapcalc ", " \"", ..., "\" ", sep="" )
+        system( comm, intern=TRUE )
+      }
+    ## temporary layer name
+    tmp <- ".TMP"
+    ## calculate 16th of to be dispersed seeds and set nulls to 0
+    r.mapcalc(
+              tmp,
+              " = ",
+              "double( ",
+              input, " / 16",
+              ## 8/16 will remain in source cell,
+              ## 8/16 will be evenly distributed in neighbouring cells
+              ignore.stderr = !options("asmDebug")[[1]]
+              )
+    execGRASS(
+              "r.null",
+              parameters = list(
+                map  = tmp,
+                null = 0
+                )
+              )
+    ## Local Dispersal of all seeds in input
+    r.mapcalc(
+              "output",
+              " = ",
+              "double( round(", 
+              tmp, "[-1,-1] + ",
+              tmp, "[-1, 0] + ",
+              tmp, "[-1, 1] + ",
+              tmp, "[ 0,-1] + ",
+              " 8 * ", tmp, "[ 0, 0] + ",
+              tmp, "[ 0, 1] + ",
+              tmp, "[ 1,-1] + ",
+              tmp, "[ 1, 0] + ",
+              tmp, "[ 1, 1]",
+              " ) )",
+              ignore.stderr = !options("asmDebug")[[1]]
+              )
+    ## remove tmp
+    execGRASS(
+              cmd = "g.remove",
+              parameter = list(
+                rast = tmp
+                )
+              )
+    ## return name of output layer
+    return(output)
+  } 
+  
+#+end_src
+
+*** Bird dispersal
+**** birdDispGRASS
+#+begin_src R  :eval nil :tangle ./pkg/R/birdDispGRASS.R :no-expand
+  ##' Bird disperse seeds from a seed layer using GRASS
+  ##' 
+  ##' @usage birdDispGRASS(input, output, overwrite)
+  ##' @name birdDispGRASS
+  ##' @title Dispersal of seeds by birds
+  ##' 
+  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
+  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @return \code{character} name of the output layer
+  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+  ##' @export 
+  ##' @callGraphPrimitives
+  birdDispGRASS <- function(input, output="birdDispSeeds", overwrite=FALSE) {
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) ) {
+      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    } 
+    MASK <- "MASK"
+    seeds <- readRAST6(
+                       c(
+                         output,
+                         input,
+                         MASK
+                         ),
+                       NODATA=-1
+                       )
+    oldWarn <- options()$warn
+    options(warn=-1)
+    seeds[[4]] <- 0
+    seeds[[4]][!is.na(seeds[[MASK]])] <- rbinom(                                     # Bird dispersal
+                                                cells <- sum(!is.na(seeds[[MASK]])), # into all cells which are not NULL in the region
+                                                sum(seeds[[input]], na.rm=TRUE),     # seeds to disperse
+                                                1/cells                              # probability is the same for each cell
+                                                )
+    options(warn=oldWarn)
+  
+    seeds[[4]][seeds[[4]]==0] <- NA
+  
+    writeRAST6(
+               seeds,
+               output,
+               NODATA = -1,
+               zcol=4,
+               overwrite = overwrite
+               )
+    ## return name of output layer
+    return(output)
+  } 
+  
+#+end_src
+
+*** Water dispersal
+**** waterDispGRASS
+#+begin_src R  :eval nil :tangle ./pkg/R/waterDispGRASS.R :no-expand
+  ##' Water disperse seeds from a seed layer using GRASS
+  ##' 
+  ##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
+  ##' @name waterDispGRASS
+  ##' @title Dispersal of seeds by water
+  ##' 
+  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
+  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @return \code{character} name of the output layer
+  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+  ##' @export 
+  ##' @callGraphPrimitives
+  waterDispGRASS <- function(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE) {
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) ) {
+      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    } 
+    r.mapcalc <- function(...)
+      {
+        comm <- paste( "r.mapcalc ", " \"", ..., "\" ", sep="" )
+        system( comm, intern=TRUE )
+      }
+    ## Calculate flow and deposit parameter
+    ## read topo laywers
+    TOPO <- readRAST6(
+                      c(
+                        slope,
+                        flowdir
+                        ),
+                      NODATA = -1
+                      )
+  
+    FLOWDIR <- sgdfToMatrix(TOPO, 2)
+  
+    ## labels <- species$depositRate$depRate
+    ## dr <- cut(
+    ##           x      = TOPO$slope,
+    ##           breaks = species$depositRate$degrees,
+    ##           labels = FALSE
+    ##           )
+    ## TOPO$slope <- labels[dr]
+    ## slope <- sgdfToMatrix(TOPO, 1)
+  
+    ## Load seeds layer
+    seeds <- readRAST6(
+                       input,
+                       NODATA = -1
+                       )
+    seeds <- sgdfToMatrix(seeds, 1)
+    ## gridded(seeds) <- FALSE
+  
+    ## seedsSoil <- readRAST6(
+    ##                        layerName(species, type="seedsSoil", year=parameter$year),
+    ##                        NODATA = -1
+    ##                        )
+    ## seedsSoil[[1]][is.na(seedsSoil[[1]])] <- 0
+  
+    ## FLOW <- seeds * NA
+  
+    ## .flowNext <- function(x, y, seeds)  ## FOR MATRIX GENERATED BY sgdfToMatrix, I.E. NORTH = DOWN!!! 
+    ##   {
+    ##     if (
+    ##         !is.na(FLOW[x, y])  |
+    ##         is.na(slope[x, y])  |
+    ##         slope[x, y] ==1     |
+    ##         is.na(FLOWDIR[x, y])
+    ##         ) {
+    ##       FLOW[x, y] <<- FLOW[x, y] + seeds
+    ##       seeds <- 0
+    ##     } else {
+    ##       dep <- round( seeds * slope[x, y] )
+    ##       FLOW[x, y] <<- dep
+    ##       seeds <- seeds - dep
+    ##     }
+  
+    ##     if (seeds > 0)
+    ##       {
+    ##         switch(
+    ##                FLOWDIR[x, y],
+    ##                {x <- x    ; y <- y - 1}, # 1
+    ##                {x <- x + 1; y <- y    }, # 2
+    ##                {x <- x + 1; y <- y    }, # 3
+    ##                {x <- x + 1; y <- y    }, # 4
+    ##                {x <- x    ; y <- y + 1}, # 5
+    ##                {x <- x - 1; y <- y + 1}, # 6
+    ##                {x <- x - 1; y <- y + 1}, # 7
+    ##                {x <- x - 1; y <- y    }, # 8
+    ##                {stop("Wrong number for FLOWDIR!")}
+    ##                )
+    ##         if (seeds > 1)
+    ##           {
+    ##             .flowNext(x, y, seeds)
+    ##           }
+    ##       }
+    ##     return(list(x, y, seeds))
+    ##   }
+  
+    ## ## calculate number of seeds to be dispersed into cells downstream
+    ## for (x in 1:nrow(seeds))
+    ##   {
+    ##     cat(x, " ")
+    ##     for (y in 1:ncol(seeds))
+    ##       {
+    ##         if (isTRUE(seeds[x, y] > 0))
+    ##           {
+    ##             .flowNext(x, y, seeds[x, y])
+    ##             path <- !is.na(FLOW)
+    ##             seedsSoil[[1]][path] <- as.vector(seedsSoil[[1]][path] + FLOW[path])
+    ##             FLOW[path] <- NA
+    ##           }
+    ##       }
+    ##   }
+    ## cat( "\n" )
+  
+    ## seedsSoil[[1]][seedsSoil[[1]]==0] <- NA
+  
+    ## ## save seedsSoil layer
+    ## mode( seedsSoil[[1]] ) <- "double"
+    ## seedsSoil@proj4string <- parameter$proj4string
+    ## writeRAST6(
+    ##            seedsSoil,
+    ##            layerName(species, type="seedsSoil", year=parameter$year),
+    ##            NODATA = -1,
+    ##            zcol=1,
+    ##            overwrite = TRUE
+    ##            )
+  
+    ## ## g.remove( "rast=", tmpDispWater, ignore.stderr=TRUE )
+    ## execGRASS(
+    ##           cmd = "g.remove",
+    ##           parameter = list(
+    ##             rast = tmpDispWater
+    ##             ),
+    ##           ignore.stderr=!options("asmDebug")[[1]]
+    ##           )
+    
+    ## dummy output
+    r.mapcalc(output, " = ", "input")
+    return(output)
+  }
 #+end_src
 
 ** src
@@ -303,40 +645,93 @@ Org-babel support for building
  * using session charset: UTF-8
  * checking for file ‘pkg/DESCRIPTION’ ... OK
  * checking extension type ... Package
- * this is package ‘seedDisp’ version ‘0.7-13’
+ * this is package ‘seedDisp’ version ‘0.8-13’
+ * checking package name space information ... OK
  * checking package dependencies ... OK
  * checking if this is a source package ... WARNING
 Subdirectory ‘seedDisp/src’ contains object files.
  * checking for executable files ... OK
- * checking whether package ‘seedDisp’ can be installed ... ERROR
-Installation failed.
-See ‘[[/home/rkrug/Documents/Projects/R-Packages/seeddisp/pkg.Rcheck/00install.out]]’ for details.
+ * checking whether package ‘seedDisp’ can be installed ... OK
+ * checking installed package size ... OK
+ * checking package directory ... OK
+ * checking for portable file names ... OK
+ * checking for sufficient/correct file permissions ... OK
+ * checking DESCRIPTION meta-information ... OK
+ * checking top-level files ... OK
+ * checking index information ... OK
+ * checking package subdirectories ... WARNING
+Subdirectory 'inst' contains no files.
+ * checking R files for non-ASCII characters ... OK
+ * checking R files for syntax errors ... OK
+ * checking whether the package can be loaded ... OK
+ * checking whether the package can be loaded with stated dependencies ... OK
+ * checking whether the package can be unloaded cleanly ... OK
+ * checking whether the name space can be loaded with stated dependencies ... OK
+ * checking whether the name space can be unloaded cleanly ... OK
+ * checking for unstated dependencies in R code ... OK
+ * checking S3 generic/method consistency ... OK
+ * checking replacement functions ... OK
+ * checking foreign function calls ... OK
+ * checking R code for possible problems ... OK
+ * checking Rd files ... OK
+ * checking Rd metadata ... OK
+ * checking Rd cross-references ... OK
+ * checking for missing documentation entries ... OK
+ * checking for code/documentation mismatches ... OK
+ * checking Rd \usage sections ... WARNING
+Undocumented arguments in documentation object 'windDispGRASS'
+  SEEDS MASK
+Documented arguments not in \usage in documentation object 'windDispGRASS':
+  input output
+Objects in \usage without \alias in documentation object 'windDispGRASS':
+  windDisp
+
+Functions with \usage entries need to have the appropriate \alias
+entries, and all their arguments documented.
+The \usage entries must correspond to syntactically valid R code.
+See the chapter 'Writing R documentation files' in the 'Writing R
+Extensions' manual.
+ * checking Rd contents ... OK
+ * checking for unstated dependencies in examples ... OK
+ * checking line endings in C/C++/Fortran sources/headers ... OK
+ * checking line endings in Makefiles ... OK
+ * checking for portable compilation flags in Makevars ... OK
+ * checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
+ * checking examples ... NONE
+ * checking PDF version of manual ... OK
+WARNING: There were 3 warnings, see
+  ‘/home/rkrug/Documents/Projects/R-Packages/seeddisp/pkg.Rcheck/00check.log’
+for details
 #+end_example
 
 
 ** INSTALL package
 
 #+begin_src sh :results output :var rckopts="--library=./Rlib"
-  R CMD INSTALL --library=$rckopts pkg
+  R CMD INSTALL $rckopts pkg
 #+end_src
 
 #+results:
+: g++ -I/usr/share/R/include   -I"/home/rkrug/R/i486-pc-linux-gnu-library/2.13/Rcpp/include"   -fpic  -O3 -pipe  -g -c windDispCpp.cpp -o windDispCpp.o
+: g++ -shared -o seedDisp.so windDispCpp.o -L/home/rkrug/R/i486-pc-linux-gnu-library/2.13/Rcpp/lib -lRcpp -Wl,-rpath,/home/rkrug/R/i486-pc-linux-gnu-library/2.13/Rcpp/lib -L/usr/lib/R/lib -lR
 
 
 ** build package
 
 #+begin_src sh :results output
-R CMD build seedDisp
+R CMD build pkg
 #+end_src
 
 #+results:
-: * checking for file ‘disp/DESCRIPTION’ ... OK
-: * preparing ‘disp’:
+: * checking for file ‘pkg/DESCRIPTION’ ... OK
+: * preparing ‘seedDisp’:
 : * checking DESCRIPTION meta-information ... OK
 : * cleaning src
 : * checking for LF line-endings in source and make files
 : * checking for empty or unneeded directories
-: * building ‘disp_0.9.tar.gz’
+: Removed empty directory ‘seedDisp/inst/doc’
+: Removed empty directory ‘seedDisp/inst’
+: * building ‘seedDisp_0.8-13.tar.gz’
 
 
 ** help pages
@@ -586,7 +981,7 @@ Committed revision 6.
 | NAMESPACE   | R-like script |
 | configure   | Bourne shell  |
 | cleanup     | Bourne shell  |
-| LICENSE     | text          |
+t| LICENSE     | text          |
 | LICENCE     | text          |
 | COPYING     | text          |
 | NEWS        | text          |
