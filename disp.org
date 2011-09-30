@@ -77,12 +77,14 @@ Org-babel support for building
 #+end_src
 
 #+results:
+: Updating collate directive in  /home/rkrug/Documents/Projects/R-Packages/seeddisp/pkg/DESCRIPTION 
+: Updating namespace directives
 
 
 * seedDisp package
 ** Package description
 #+begin_src R :eval nil :tangle ./pkg/seedDisp-package.R :shebang :padline no :no-expand :comments no
-  ##'   Disperses seeds by using different routines
+  ##' Disperses seeds by using different routines
   ##' 
   ##' \tabular{ll}{
   ##' Package: \tab seedDisp\cr
@@ -92,9 +94,6 @@ Org-babel support for building
   ##' License: \tab GPL (>= 2)\cr
   ##' LazyLoad: \tab yes\cr
   ##' }
-  ##'
-  ##' Using the Fermat primality test, pseudoprime checks for primes
-  ##' probabilistically; the test is fooled every time by Carmichael
   ##'
   ##' @docType package
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
@@ -144,6 +143,7 @@ Org-babel support for building
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
   ##' @export 
   ##' @callGraphPrimitives
+  ##' @useDynLib seedDisp
   windDisp <- function(SD2D, SEEDS, MASK) {
     ## Calculate size parameter of sd2D
     dx2 <- (ncol(SD2D) - 1)
@@ -189,7 +189,7 @@ Org-babel support for building
   ##' @export 
   ##' @callGraphPrimitives
   windDispGRASS <- function(SD2D, input, output="windDispSeeds", overwrite=FALSE) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) ) {
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
       stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
   
@@ -257,7 +257,7 @@ Org-babel support for building
   ##' @export 
   ##' @callGraphPrimitives
   localDispGRASS <- function(input, output="localDispSeeds", overwrite=FALSE) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) ) {
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
       stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     r.mapcalc <- function(...)
@@ -266,16 +266,14 @@ Org-babel support for building
         system( comm, intern=TRUE )
       }
     ## temporary layer name
-    tmp <- ".TMP"
+    tmp <- "TMP"
     ## calculate 16th of to be dispersed seeds and set nulls to 0
     r.mapcalc(
               tmp,
               " = ",
-              "double( ",
-              input, " / 16",
+              "double( ", input, " / 16 )"
               ## 8/16 will remain in source cell,
               ## 8/16 will be evenly distributed in neighbouring cells
-              ignore.stderr = !options("asmDebug")[[1]]
               )
     execGRASS(
               "r.null",
@@ -286,7 +284,7 @@ Org-babel support for building
               )
     ## Local Dispersal of all seeds in input
     r.mapcalc(
-              "output",
+              output,
               " = ",
               "double( round(", 
               tmp, "[-1,-1] + ",
@@ -298,8 +296,7 @@ Org-babel support for building
               tmp, "[ 1,-1] + ",
               tmp, "[ 1, 0] + ",
               tmp, "[ 1, 1]",
-              " ) )",
-              ignore.stderr = !options("asmDebug")[[1]]
+              " ) )"
               )
     ## remove tmp
     execGRASS(
@@ -331,13 +328,12 @@ Org-babel support for building
   ##' @export 
   ##' @callGraphPrimitives
   birdDispGRASS <- function(input, output="birdDispSeeds", overwrite=FALSE) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) ) {
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
       stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     MASK <- "MASK"
     seeds <- readRAST6(
                        c(
-                         output,
                          input,
                          MASK
                          ),
@@ -345,21 +341,21 @@ Org-babel support for building
                        )
     oldWarn <- options()$warn
     options(warn=-1)
-    seeds[[4]] <- 0
-    seeds[[4]][!is.na(seeds[[MASK]])] <- rbinom(                                     # Bird dispersal
+    seeds[[3]] <- 0
+    seeds[[3]][!is.na(seeds[[MASK]])] <- rbinom(                                     # Bird dispersal
                                                 cells <- sum(!is.na(seeds[[MASK]])), # into all cells which are not NULL in the region
                                                 sum(seeds[[input]], na.rm=TRUE),     # seeds to disperse
                                                 1/cells                              # probability is the same for each cell
                                                 )
     options(warn=oldWarn)
   
-    seeds[[4]][seeds[[4]]==0] <- NA
+    seeds[[3]][seeds[[3]]==0] <- NA
   
     writeRAST6(
                seeds,
                output,
                NODATA = -1,
-               zcol=4,
+               zcol=3,
                overwrite = overwrite
                )
     ## return name of output layer
@@ -368,8 +364,88 @@ Org-babel support for building
   
 #+end_src
 
-*** Water dispersal
-**** waterDispGRASS
+*** TODO Water dispersal
+**** shiftMbyAgnps
+This function will convert the apnps direction from GRASS into index differences for a R matrix
+
+- From GRASS :: agnps based
+|---+---+---|
+| 8 | 1 | 2 |
+|---+---+---|
+| 7 |   | 3 | 
+|---+---+---|
+| 6 | 5 | 4 |
+|---+---+---|
+
+- In R matrix ::
+|---+---+---|
+| 6 | 5 | 4 |
+|---+---+---|
+| 7 |   | 3 | 
+|---+---+---|
+| 8 | 1 | 2 |
+|---+---+---|
+
+- In R matrix :: based on e.g. ~as.matrix(readGRASS6())~:
+|------------+----------+------------|
+| [x-1, y-1] | [x, y-1] | [x+1, y-1] |
+|------------+----------+------------|
+| [x-1, y  ] | [x, y  ] | [x+1, y  ] |
+|------------+----------+------------|
+| [x-1, y+1] | [x, y+1] | [x+1, y+1] |
+|------------+----------+------------|
+
+#+begin_src R  :eval nil :tangle ./pkg/R/shiftMByAgnps.R :no-expand
+  ##' Shift cells in m by one cell usind the direction given in agnps
+  ##' 
+  ##' @usage shiftMByAgnps(m, agnps)
+  ##' @name shiftMByAgnps
+  ##' @title Determine formula for Deposit layer
+  ##' 
+  ##' @title Shift cells in matrix m in direction given in agnps matrix
+  ##' @param m \code{matrix} to be "flown"
+  ##' @param agnps \code{matrix} of same dim=ension as \code{m} containing agnps flow directions as returned from GRASS
+  ##' @return 
+  ##' @author Rainer M Krug
+  ##' @export 
+  ##' @callGraphPrimitives
+  shiftMByAgnps <- function(m, agnps) {
+    ## define vectors for shifting
+    ## agnps 1,  2,  3,  4,  5,  6,  7,  8) 
+    dx <- c( 0, -1, -1, -1,  0, +1, +1, +1) # first index in matrix
+    dy <- c(+1, +1,  0, -1, -1, -1,  0, +1) # second index in matrix
+    ## create index Matix
+    im <- cbind(
+                rep(1:nrow(m), each=ncol(m)),
+                rep(1:ncol(m), nrow(m))
+                )
+    ## create shifted index matrix
+    ims <- im
+    ## calculate x-shift
+    ims[,1] <- im[,1] + dx[agnps[im]]
+    ## and correct for "out of matrix shifts"
+    ims[,1][ims[,1] < 1      ] <- NA
+    ims[,1][ims[,1] > nrow(m)] <- NA
+    ## calculate y-shift
+    ims[,2] <- im[,2] + dy[agnps[im]]
+    ## and correct for "out of matrix shifts"
+    ims[,2][ims[,2] < 1      ] <- NA
+    ims[,2][ims[,2] > ncol(m)] <- NA
+    ## remove all which have NA from im and ims
+    sel <- !is.na(ims[,1]) & !is.na(ims[,2])
+    im <- im[sel,]
+    ims <- ims[sel,]
+    ## build shifted matrix m
+    ## TODO deal with duplicate shifts into cell!
+    i <- 
+    m.out <- m
+    m.out[] <- NA
+    m.out[im] <- m[ims]
+    return(m.out)
+  }
+#+end_src
+
+** waterDispGRASS
 #+begin_src R  :eval nil :tangle ./pkg/R/waterDispGRASS.R :no-expand
   ##' Water disperse seeds from a seed layer using GRASS
   ##' 
@@ -379,111 +455,240 @@ Org-babel support for building
   ##' 
   ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
   ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param slope \code{character} name of GRASS raster layer containing the slope in degrees
+  ##' @param flowdir \code{character} name of GRASS raster containing flow direction (in GRASS agnps format)
+  ##' @param depRates \code{matrix} where the first column are slope and the second column the responding deposit rates
   ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
   ##' @return \code{character} name of the output layer
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
   ##' @export 
   ##' @callGraphPrimitives
-  waterDispGRASS <- function(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) ) {
+  waterDispGRASS <- function(input, output="waterDispSeeds", slope="slope", flowdir="flowdir", depRates, overwrite=FALSE) {
+    stop("TO BE IMPLEMENTED")
+  
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
       stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
-    } 
-    r.mapcalc <- function(...)
-      {
-        comm <- paste( "r.mapcalc ", " \"", ..., "\" ", sep="" )
-        system( comm, intern=TRUE )
-      }
-    ## Calculate flow and deposit parameter
-    ## read topo laywers
-    TOPO <- readRAST6(
-                      c(
-                        slope,
-                        flowdir
-                        ),
-                      NODATA = -1
-                      )
-  
-    FLOWDIR <- sgdfToMatrix(TOPO, 2)
-  
-    ## labels <- species$depositRate$depRate
-    ## dr <- cut(
-    ##           x      = TOPO$slope,
-    ##           breaks = species$depositRate$degrees,
-    ##           labels = FALSE
-    ##           )
-    ## TOPO$slope <- labels[dr]
-    ## slope <- sgdfToMatrix(TOPO, 1)
-  
+    }
+  #######################
+    names(depRates) <- c("depDegrees", "depRates")
     ## Load seeds layer
     seeds <- readRAST6(
                        input,
                        NODATA = -1
                        )
-    seeds <- sgdfToMatrix(seeds, 1)
-    ## gridded(seeds) <- FALSE
+    seeds.m <- matrix(
+                      seeds[[1]],
+                      nrow=gridparameters(seeds)$cells.dim[1],
+                      ncol=gridparameters(seeds)$cells.dim[2]
+                      )
+    # seeds.m[is.na(seeds.m)] <- -1  
+    ## Load slope layer
+    slope <- readRAST6(
+                       slope,
+                       NODATA = -1
+                       )
+    slope.m <- matrix(
+                      slope[[1]],
+                      nrow=gridparameters(slope)$cells.dim[1],
+                      ncol=gridparameters(slope)$cells.dim[2]
+                      )
+    ## Load flowdir layer
+    flowdir <- readRAST6(
+                         flowdir,
+                         NODATA = -1
+                         )
+    
+    flowdir.m <- matrix(
+                        flowdir[[1]],
+                        nrow=gridparameters(flowdir)$cells.dim[1],
+                        ncol=gridparameters(flowdir)$cells.dim[2]
+                        )
+    ## calculate deposit rates (depRate)
+    depRate <- slope
+    depRate[[1]] <- cut(
+                        x      = slope[[1]],
+                        breaks = depRates$depDegrees,
+                        labels = FALSE
+                        )
+    depRate[[1]] <- depRates$depRate[depRate[[1]]]
+    depRate.m <- matrix(
+                        depRate[[1]],
+                        nrow=gridparameters(depRate)$cells.dim[1],
+                        ncol=gridparameters(depRate)$cells.dim[2]
+                        )
+    ## Create output layer (seeds$output)
+    seeds$output <- NA
+    output.m <- seeds.m
+    output.m[] <- 0
+    
+    ## calculate number of seeds to be dispersed into cells downstream
+    ## TODO add filters to only calculate relevant cells
   
-    ## seedsSoil <- readRAST6(
-    ##                        layerName(species, type="seedsSoil", year=parameter$year),
-    ##                        NODATA = -1
-    ##                        )
-    ## seedsSoil[[1]][is.na(seedsSoil[[1]])] <- 0
+    seedsDep.m <- ceiling(depRate.m * seeds.m)
+    output.m <- output.m + seedsDep.m
+    seeds.m <- seeds.m - seedsDep.m
+    seeds.m[seeds.m < 0] <- 0
+    seeds.m <- shiftMbyAgnps(seeds.m, agnps)
   
-    ## FLOW <- seeds * NA
+    
+  } 
+#+end_src
+
+**** calcDepLayer
+
+#+begin_src R  :eval nil :tangle ./pkg/R/calcDepLayer.R :no-expand
+  ##' Calculate GRASS mapcalc function to calculate water dispersal layer
+  ##' 
+  ##' @usage calcDepLayerGRASS(input, output="depLayer", slope="slope", flowdir="flowdir", depRates, overwrite=FALSE
+  ##' @name calcDepLayerGRASS
+  ##' @title Determine formula for Deposit layer
+  ##' 
+  ##' @param slope \code{character} name of slope layer 
+  ##' @param flowdir \code{character} name of flow direction layer in GRASS agnps format
+  ##' @param depRates \code{list} list of two \code{numeric} vectors of same length, where depRates[[1]] are the degrees and depRates[[2]] the according deposit rates
+  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @return \code{character} ?????
+  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+  ##' @export 
+  ##' @callGraphPrimitives
+  calcDepLayerGRASS <- function(slope="slope", flowdir="flowdir", depRates, overwrite=FALSE) {
+    stop("TO BE IMPLEMENTED")
   
-    ## .flowNext <- function(x, y, seeds)  ## FOR MATRIX GENERATED BY sgdfToMatrix, I.E. NORTH = DOWN!!! 
-    ##   {
-    ##     if (
-    ##         !is.na(FLOW[x, y])  |
-    ##         is.na(slope[x, y])  |
-    ##         slope[x, y] ==1     |
-    ##         is.na(FLOWDIR[x, y])
-    ##         ) {
-    ##       FLOW[x, y] <<- FLOW[x, y] + seeds
-    ##       seeds <- 0
-    ##     } else {
-    ##       dep <- round( seeds * slope[x, y] )
-    ##       FLOW[x, y] <<- dep
-    ##       seeds <- seeds - dep
-    ##     }
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    } 
+    ## #####################
+    r.mapcalc <- function(...)
+      {
+        comm <- paste( "r.mapcalc ", " \"", ..., "\" ", sep="" )
+        system( comm, intern=TRUE )
+      }
   
-    ##     if (seeds > 0)
-    ##       {
-    ##         switch(
-    ##                FLOWDIR[x, y],
-    ##                {x <- x    ; y <- y - 1}, # 1
-    ##                {x <- x + 1; y <- y    }, # 2
-    ##                {x <- x + 1; y <- y    }, # 3
-    ##                {x <- x + 1; y <- y    }, # 4
-    ##                {x <- x    ; y <- y + 1}, # 5
-    ##                {x <- x - 1; y <- y + 1}, # 6
-    ##                {x <- x - 1; y <- y + 1}, # 7
-    ##                {x <- x - 1; y <- y    }, # 8
-    ##                {stop("Wrong number for FLOWDIR!")}
-    ##                )
-    ##         if (seeds > 1)
-    ##           {
-    ##             .flowNext(x, y, seeds)
-    ##           }
-    ##       }
-    ##     return(list(x, y, seeds))
-    ##   }
+    ## #####################
+    ## this function should return a vector containing information on how to calculate the number of seed s in the final matrix
+    .flowNext <- function(
+                          x,              # x-location in matrix
+                          y,              # y-location in matrix
+                          dep,            # deposit rates matrix
+                          dir             # flow direction matrix
+                          )
+      {
+        if (
+            !is.na(FLOW[x, y])  |
+            is.na(dep[x, y])  |
+            dep[x, y] ==1     |
+            is.na(dir[x, y])
+            ) {
+          FLOW[x, y] <<- FLOW[x, y] + seeds
+          seeds <- 0
+        } else {
+          dep <- round( seeds * dep[x, y] )
+          FLOW[x, y] <<- dep
+          seeds <- seeds - dep
+        }
+        if (seeds > 0)
+          {
+            switch(
+                   dir[x, y],
+                   {x <- x    ; y <- y - 1}, # 1
+                   {x <- x + 1; y <- y    }, # 2
+                   {x <- x + 1; y <- y    }, # 3
+                   {x <- x + 1; y <- y    }, # 4
+                   {x <- x    ; y <- y + 1}, # 5
+                   {x <- x - 1; y <- y + 1}, # 6
+                   {x <- x - 1; y <- y + 1}, # 7
+                   {x <- x - 1; y <- y    }, # 8
+                   {stop("Wrong number for dir!")}
+                   )
+            if (seeds > 1)
+              {
+                .flowNext(x, y, seeds, dep, dir)
+              }
+          }
+        return(list(x, y, seeds))
+      }
+    ## #####################
+    
+    names(depRates) <- c("depDegrees", "depRates")
+    ## read slope layer
+    slope <- readRAST6(
+                       slope,
+                       NODATA = -1
+                       )
+    slope.m <- matrix(
+                      slope[[1]],
+                      nrow=gridparameters(slope)$cells.dim[1],
+                      ncol=gridparameters(slope)$cells.dim[2]
+                      )
+    ## read flowdir layer
+    flowdir <- readRAST6(
+                         flowdir,
+                         NODATA = -1
+                         )
+    flowdir.m <- matrix(
+                        flowdir[[1]],
+                        nrow=gridparameters(flowdir)$cells.dim[1],
+                        ncol=gridparameters(flowdir)$cells.dim[2]
+                        )
+    ## calculate deposit rates (depRate)
+    depRate <- slope
+    depRate[[1]] <- cut(
+                        x      = slope[[1]],
+                        breaks = depRates$degrees,
+                        labels = FALSE
+                        )
+    depRate[[1]] <- depRates$depRate[depRate[[1]]]
+    depRate.m <- matrix(
+                        depRate[[1]],
+                        nrow=gridparameters(depRate)$cells.dim[1],
+                        ncol=gridparameters(depRate)$cells.dim[2]
+                        )
+    ## Create output layer (seeds$output)
+    dep.m <- depRate.m
+    dep.m[] <- "0"
   
-    ## ## calculate number of seeds to be dispersed into cells downstream
-    ## for (x in 1:nrow(seeds))
-    ##   {
-    ##     cat(x, " ")
-    ##     for (y in 1:ncol(seeds))
-    ##       {
-    ##         if (isTRUE(seeds[x, y] > 0))
-    ##           {
-    ##             .flowNext(x, y, seeds[x, y])
-    ##             path <- !is.na(FLOW)
-    ##             seedsSoil[[1]][path] <- as.vector(seedsSoil[[1]][path] + FLOW[path])
-    ##             FLOW[path] <- NA
-    ##           }
-    ##       }
-    ##   }
-    ## cat( "\n" )
+    ## calculate number of seeds to be dispersed into cells downstream
+    for (x in 1:nrow(flowdir.m))
+      {
+        cat(x, " ")
+        for (y in 1:ncol(flowdir.m))
+          {
+            if (isTRUE(depRate.m[x, y] > 0 & depRate.m[x,y] < 1))
+              {
+                FLOW[x, y] <<- FLOW[x, y] + seeds
+                seeds <- 0
+              } else {
+                dep <- "round( seeds * dep[x, y] )
+                FLOW[x, y] <<- dep
+                seeds <- seeds - dep
+              }
+            if (seeds > 0)
+              {
+                switch(
+                       dir[x, y],
+                       {x <- x    ; y <- y - 1}, # 1
+                       {x <- x + 1; y <- y    }, # 2
+                       {x <- x + 1; y <- y    }, # 3
+                       {x <- x + 1; y <- y    }, # 4
+                       {x <- x    ; y <- y + 1}, # 5
+                       {x <- x - 1; y <- y + 1}, # 6
+                       {x <- x - 1; y <- y + 1}, # 7
+                       {x <- x - 1; y <- y    }, # 8
+                       {stop("Wrong number for dir!")}
+                       )
+                if (seeds > 1)
+                  {
+                    .flowNext(x, y, seeds, dep, dir)
+                  }
+              }
+            path <- !is.na(FLOW)
+            seeds$output[path] <- as.vector(FLOW[path])
+            FLOW[path] <- NA
+          }
+      }
+  
+  }
+  cat( "\n" )
   
     ## seedsSoil[[1]][seedsSoil[[1]]==0] <- NA
   
@@ -511,6 +716,174 @@ Org-babel support for building
     r.mapcalc(output, " = ", "input")
     return(output)
   }
+  
+#+end_src
+
+**** waterDispGRASS
+#+begin_src R  :eval nil :tangle ./pkg/R/waterDispGRASS.R :no-expand
+  ##' Water disperse seeds from a seed layer using GRASS
+  ##' 
+  ##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
+  ##' @name waterDispGRASS
+  ##' @title Dispersal of seeds by water
+  ##' 
+  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
+  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param slope \code{character} name of GRASS raster layer containing the slope in degrees
+  ##' @param flowdir \code{character} name of GRASS raster containing flow direction (in GRASS agnps format)
+  ##' @param depRates \code{matrix} where the first column are slope and the second column the responding deposit rates
+  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @return \code{character} name of the output layer
+  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+  ##' @export 
+  ##' @callGraphPrimitives
+  waterDispGRASS <- function(input, output="waterDispSeeds", slope="slope", flowdir="flowdir", depRates, overwrite=FALSE) {
+    stop("TO BE IMPLEMENTED")
+  
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    } 
+    #######################
+    r.mapcalc <- function(...)
+      {
+        comm <- paste( "r.mapcalc ", " \"", ..., "\" ", sep="" )
+        system( comm, intern=TRUE )
+      }
+    #######################
+    .flowNext <- function(x, y, seeds, dep, dir)  ## FOR MATRIX GENERATED BY sgdfToMatrix, I.E. NORTH = DOWN!!! 
+      {
+        if (
+            !is.na(FLOW[x, y])  |
+            is.na(dep[x, y])  |
+            dep[x, y] ==1     |
+            is.na(dir[x, y])
+            ) {
+          FLOW[x, y] <<- FLOW[x, y] + seeds
+          seeds <- 0
+        } else {
+          dep <- round( seeds * dep[x, y] )
+          FLOW[x, y] <<- dep
+          seeds <- seeds - dep
+        }
+  
+        if (seeds > 0)
+          {
+            switch(
+                   dir[x, y],
+                   {x <- x    ; y <- y - 1}, # 1
+                   {x <- x + 1; y <- y    }, # 2
+                   {x <- x + 1; y <- y    }, # 3
+                   {x <- x + 1; y <- y    }, # 4
+                   {x <- x    ; y <- y + 1}, # 5
+                   {x <- x - 1; y <- y + 1}, # 6
+                   {x <- x - 1; y <- y + 1}, # 7
+                   {x <- x - 1; y <- y    }, # 8
+                   {stop("Wrong number for dir!")}
+                   )
+            if (seeds > 1)
+              {
+                .flowNext(x, y, seeds, dep, dir)
+              }
+          }
+        return(list(x, y, seeds))
+      }
+    #######################
+    names(depRates) <- c("depDegrees", "depRates")
+    ## Load seeds layer
+    seeds <- readRAST6(
+                       input,
+                       NODATA = -1
+                       )
+    seeds.m <- matrix(
+                      seeds[[1]],
+                      nrow=gridparameters(seeds)$cells.dim[1],
+                      ncol=gridparameters(seeds)$cells.dim[2]
+                      )
+    seeds.m[is.na(seeds.m)] <- -1
+  
+    ## Calculate flow and deposit parameter
+    ## read topo laywers
+    slope <- readRAST6(
+                       slope,
+                       NODATA = -1
+                       )
+    slope.m <- matrix(
+                      slope[[1]],
+                      nrow=gridparameters(slope)$cells.dim[1],
+                      ncol=gridparameters(slope)$cells.dim[2]
+                      )
+    ##
+    flowdir <- readRAST6(
+                         flowdir,
+                         NODATA = -1
+                         )
+    
+    flowdir.m <- matrix(
+                        flowdir[[1]],
+                        nrow=gridparameters(flowdir)$cells.dim[1],
+                        ncol=gridparameters(flowdir)$cells.dim[2]
+                        )
+    ## calculate deposit rates (depRate)
+    depRate <- slope
+    depRate[[1]] <- cut(
+                        x      = slope[[1]],
+                        breaks = depRates$degrees,
+                        labels = FALSE
+                        )
+    depRate[[1]] <- depRates$depRate[depRate[[1]]]
+    depRate.m <- matrix(
+                        depRate[[1]],
+                        nrow=gridparameters(depRate)$cells.dim[1],
+                        ncol=gridparameters(depRate)$cells.dim[2]
+                        )
+    ## Create output layer (seeds$output)
+    seeds$output <- NA
+    FLOW <- seeds.m * NA
+  
+    ## calculate number of seeds to be dispersed into cells downstream
+    for (x in 1:nrow(seeds.m))
+      {
+        cat(x, " ")
+        for (y in 1:ncol(seeds.m))
+          {
+            if (seeds.m[x, y] > 0)
+              {
+                .flowNext(x, y, seeds.m[x, y], depRate.m, flowdir.m)
+                path <- !is.na(FLOW)
+                seeds$output[path] <- as.vector(FLOW[path])
+                FLOW[path] <- NA
+              }
+          }
+      }
+    cat( "\n" )
+  
+    ## seedsSoil[[1]][seedsSoil[[1]]==0] <- NA
+  
+    ## ## save seedsSoil layer
+    ## mode( seedsSoil[[1]] ) <- "double"
+    ## seedsSoil@proj4string <- parameter$proj4string
+    ## writeRAST6(
+    ##            seedsSoil,
+    ##            layerName(species, type="seedsSoil", year=parameter$year),
+    ##            NODATA = -1,
+    ##            zcol=1,
+    ##            overwrite = TRUE
+    ##            )
+  
+    ## ## g.remove( "rast=", tmpDispWater, ignore.stderr=TRUE )
+    ## execGRASS(
+    ##           cmd = "g.remove",
+    ##           parameter = list(
+    ##             rast = tmpDispWater
+    ##             ),
+    ##           ignore.stderr=!options("asmDebug")[[1]]
+    ##           )
+    
+    ## dummy output
+    r.mapcalc(output, " = ", "input")
+    return(output)
+  }
+  
 #+end_src
 
 ** src
@@ -734,35 +1107,6 @@ R CMD build pkg
 : * building ‘seedDisp_0.8-13.tar.gz’
 
 
-** help pages
-
-- The src block adds enough asterisks to the line listing each
-  filename to turn it into a headline at the next level down. This is
-  helpful if you have a lot of help pages and want to fold them up for
-  browsing.
-
-#+begin_src R :results output :var hdlev=(car (org-heading-components))
-  linestart <- paste( c( "\n", rep('*', hdlev+1 ) ), collapse='')
-  rd.files <- Sys.glob("man/*.Rd")
-  for ( ird in rd.files ){
-    hlp.txt <- capture.output(tools:::Rd2txt( ird ) )
-    hlp.txt <- gsub( "_\b","", hlp.txt)
-    headline <- paste( linestart, ird ,'\n' )
-    cat( headline, hlp.txt , sep='\n')
-  }
-#+end_src
-
-: #+begin_src R :results output :var hdlev=(car (org-heading-components))
-:   linestart <- paste( c( "\n", rep('*', hdlev+1 ) ), collapse='')
-:   rd.files <- Sys.glob("man/*.Rd")
-:   for ( ird in rd.files ){
-:     hlp.txt <- capture.output(tools:::Rd2txt( ird ) )
-:     hlp.txt <- gsub( "_\b","", hlp.txt)
-:     headline <- paste( linestart, ird ,'\n' )
-:     cat( headline, hlp.txt , sep='\n')
-:   }
-: #+end_src
-  
 ** load library
 
 #+begin_src R :session :results output :var libname=(file-name-directory buffer-file-name)
@@ -849,7 +1193,6 @@ dir.create("./Rlib")
 :   simple.df
 :   count.rows( repeated.df )  
 : #+end_src
-
 
 * Version Control, Navigation, and setup tasks
 ** list files for convenient navigation 
@@ -966,11 +1309,6 @@ Sending        postTangleScript.sh
 Transmitting file data .....
 Committed revision 6.
 #+end_example
-
-
-
-
-
 * Package structure and src languages                              :noexport:
 
 - The top level directory may contain these files (and others):
@@ -981,7 +1319,7 @@ Committed revision 6.
 | NAMESPACE   | R-like script |
 | configure   | Bourne shell  |
 | cleanup     | Bourne shell  |
-t| LICENSE     | text          |
+| LICENSE     | text          |
 | LICENCE     | text          |
 | COPYING     | text          |
 | NEWS        | text          |
