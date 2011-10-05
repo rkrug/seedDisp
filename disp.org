@@ -139,12 +139,13 @@ Org-babel support for building
   ##' @param SD2D \code{matrix} defining the 2D seed dispersal kernel 
   ##' @param SEEDS \code{matrix} specifying the number of seeds to be dispersed
   ##' @param MASK \code{matrix} defining the area in which processing takes place (\code{!is.na(MASK)}) 
+  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NA, otherwise NA to 0
   ##' @return \code{matrix} of same size as SEEDS containing the dispersed seeds
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
   ##' @export 
   ##' @callGraphPrimitives
   ##' @useDynLib seedDisp
-  windDisp <- function(SD2D, SEEDS, MASK) {
+  windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
     ## Calculate size parameter of sd2D
     dx2 <- (ncol(SD2D) - 1)
     dy2 <- (nrow(SD2D) - 1)
@@ -156,8 +157,7 @@ Org-babel support for building
     buffer <- matrix(NA, ncol=ncol(SEEDS), nrow=dy)
     SEEDS <- rbind(buffer, SEEDS, buffer)
     ## call C++ function
-    return(
-           .Call(
+    output <- .Call(
                  "windDispCpp",
                  dx2,
                  dy2,
@@ -166,7 +166,12 @@ Org-babel support for building
                  MASK,
                  PACKAGE = "seedDisp"
                  )
-           )
+    if (zeroToNULL) {
+      output[output==0] <- NA
+    } else {
+      output[is.na(output)] <- 0
+    }
+    return(output)
   }
   
 #+end_src
@@ -183,16 +188,17 @@ Org-babel support for building
   ##' @param SD2D \code{matrix} defining the 2D seed dispersal kernel 
   ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
   ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param zeroToNULL  \code{boolean} if TRUE convert zeros to NULL, otherwise NA to 0
   ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
   ##' @return \code{character} name of the output layer
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
   ##' @export 
   ##' @callGraphPrimitives
-  windDispGRASS <- function(SD2D, input, output="windDispSeeds", overwrite=FALSE) {
+  windDispGRASS <- function(SD2D, input, output="windDispSeeds", zeroToNULL=TRUE, overwrite=FALSE) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
       stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
-  
+    ##
     seeds <- readRAST6(
                        c(
                          input,
@@ -214,7 +220,8 @@ Org-babel support for building
     dispSeeds.m <- windDisp(
                             SD2D = SD2D,
                             SEEDS = seeds.m,
-                            MASK = mask.m
+                            MASK = mask.m,
+                            zeroToNULL = zeroToNULL
                             )
   
     seeds@data[[2]] <- as.vector(dispSeeds.m)
@@ -228,14 +235,6 @@ Org-babel support for building
                zcol=2,
                overwrite = overwrite
                )
-    execGRASS(
-              "r.null",
-              parameters = list(
-                map  = output,
-                setnull = "0"
-                ),
-              ignore.stderr=!options("asmDebug")[[1]]
-              )
     return(output)
   }
   
@@ -251,12 +250,13 @@ Org-babel support for building
   ##' @title Dispersal of seeds locally, i.e. in surounding cells (half, evenly distributed)
   ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
   ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NULL, otherwise NA to 0
   ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
   ##' @return \code{character} name of the output layer
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
   ##' @export 
   ##' @callGraphPrimitives
-  localDispGRASS <- function(input, output="localDispSeeds", overwrite=FALSE) {
+  localDispGRASS <- function(input, output="localDispSeeds", zeroToNULL=TRUE, overwrite=FALSE) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
       stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
@@ -305,6 +305,26 @@ Org-babel support for building
                 rast = tmp
                 )
               )
+    ## if zeroToNULL
+    if (zeroToNULL) {
+      execGRASS(
+                "r.null",
+                parameters = list(
+                  map=output,
+                  setnull="0"
+                  ),
+                ignore.stderr=!options("asmDebug")[[1]]
+                )
+    } else {
+      execGRASS(
+                "r.null",
+                parameters = list(
+                  map=output,
+                  null=0
+                  ),
+                ignore.stderr=!options("asmDebug")[[1]]
+                )    
+    }
     ## return name of output layer
     return(output)
   } 
@@ -322,12 +342,13 @@ Org-babel support for building
   ##' 
   ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
   ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NULL, otherwise NA to 0
   ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
   ##' @return \code{character} name of the output layer
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
   ##' @export 
   ##' @callGraphPrimitives
-  birdDispGRASS <- function(input, output="birdDispSeeds", overwrite=FALSE) {
+  birdDispGRASS <- function(input, output="birdDispSeeds", zeroToNULL=TRUE, overwrite=FALSE) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
       stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
@@ -349,8 +370,11 @@ Org-babel support for building
                                                 )
     options(warn=oldWarn)
   
-    seeds[[3]][seeds[[3]]==0] <- NA
-  
+    if (zeroToNULL) {
+      seeds[[3]][seeds[[3]]==0] <- NA
+    } else {
+      seeds[[3]][is.na(seeds[[3]])] <- 0
+    }
     writeRAST6(
                seeds,
                output,
@@ -406,13 +430,14 @@ This function will convert the apnps direction from GRASS into index differences
   ##' @param input \code{matrix} of seeds to be dispersed by water flow
   ##' @param depRate \code{matrix} of deposit rates
   ##' @param agnps \code{matrix} of same dim=ension as \code{m} containing agnps flow directions as returned from GRASS of same dimensionality as \code{input}
+  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NA, otherwise NA to 0
   ##' @param progress \code{boolean} if TRUE, showing progress, otherwise silent
   ##' @param m \code{matrix} to be "flown" of same dimensionality as \code{input}
   ##' @return 
   ##' @author Rainer M Krug
   ##' @export 
   ##' @callGraphPrimitives
-  waterDisp <- function(input, depRate, agnps, progress=TRUE) {
+  waterDisp <- function(input, depRate, agnps, zeroToNULL=TRUE, progress=TRUE) {
     ## define vectors for flowing direction translation from agnps to matrix
     ## agnps 1,  2,  3,  4,  5,  6,  7,  8) 
     dx <- c( 0, +1, +1, +1,  0, -1, -1, -1) # first index in matrix
@@ -477,7 +502,11 @@ This function will convert the apnps direction from GRASS into index differences
       }
     }
     ##
-    output.dep[output.dep==0] <- NA
+    if (zeroToNULL) {
+      output.dep[output.dep==0] <- NA
+    } else {
+      output.dep[is.na(output.dep)] <- 0
+    }
     return(output.dep)
   }
 #+end_src
@@ -496,12 +525,13 @@ This function will convert the apnps direction from GRASS into index differences
   ##' @param flowdir \code{character} name of GRASS raster containing flow direction (in GRASS agnps format)
   ##' @param depRates \code{matrix} where the first column are slope and the second column the responding deposit rates
   ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NULL, otherwise NA to 0
   ##' @param progress \code{boolean} if TRUE, showing progress, otherwise silent
   ##' @return \code{character} name of the output layer
   ##' @author Rainer M Krug \email{Rainer@@krugs.de}
   ##' @export 
   ##' @callGraphPrimitives
-  waterDispGRASS <- function(input, output="waterDispSeeds", slope="slope", flowdir="flowdir", depRates, overwrite=FALSE, progress=TRUE) {
+  waterDispGRASS <- function(input, output="waterDispSeeds", slope="slope", flowdir="flowdir", depRates, overwrite=FALSE, zeroToNULL=TRUE, progress=TRUE) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
       stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
@@ -560,6 +590,7 @@ This function will convert the apnps direction from GRASS into index differences
                                            input = seeds.m,
                                            depRate = depRate.m,
                                            agnps = flowdir.m,
+                                           zeroToNULL = zeroToNULL,
                                            progress = TRUE)
                                  )
     
