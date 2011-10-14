@@ -1,0 +1,295 @@
+#    -*- mode: org -*-
+
+
+Archived entries from file /home/rkrug/Documents/Projects/AlienSpread/trunc/seeddisp/disp.org
+
+
+* calcDepLayer
+  :PROPERTIES:
+  :ARCHIVE_TIME: 2011-10-04 Tue 13:48
+  :ARCHIVE_FILE: ~/Documents/Projects/AlienSpread/trunc/seeddisp/disp.org
+  :ARCHIVE_OLPATH: seedDisp package/R/waterDispGRASS
+  :ARCHIVE_CATEGORY: disp
+  :END:
+
+#+begin_src R  :eval nil :tangle ./pkg/R/calcDepLayer.R :no-expand
+  ##' Calculate GRASS mapcalc function to calculate water dispersal layer
+  ##' 
+  ##' @usage calcDepLayerGRASS(input, output="depLayer", slope="slope", flowdir="flowdir", depRates, overwrite=FALSE
+  ##' @name calcDepLayerGRASS
+  ##' @title Determine formula for Deposit layer
+  ##' 
+  ##' @param slope \code{character} name of slope layer 
+  ##' @param flowdir \code{character} name of flow direction layer in GRASS agnps format
+  ##' @param depRates \code{list} list of two \code{numeric} vectors of same length, where depRates[[1]] are the degrees and depRates[[2]] the according deposit rates
+  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @return \code{character} ?????
+  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+  ##' @export 
+  ##' @callGraphPrimitives
+  calcDepLayerGRASS <- function(slope="slope", flowdir="flowdir", depRates, overwrite=FALSE, debug=TRUE) {
+    stop("TO BE IMPLEMENTED")
+  
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    } 
+    ## #####################
+    r.mapcalc <- function(...)
+      {
+        comm <- paste( "r.mapcalc ", " \"", ..., "\" ", sep="" )
+        system( comm, intern=TRUE )
+      }
+  
+    ## #####################
+    ## this function should return a vector containing information on how to calculate the number of seed s in the final matrix
+    .flowNext <- function(
+                          x,              # x-location in matrix
+                          y,              # y-location in matrix
+                          dep,            # deposit rates matrix
+                          dir             # flow direction matrix
+                          )
+      {
+        if (
+            !is.na(FLOW[x, y])  |
+            is.na(dep[x, y])  |
+            dep[x, y] ==1     |
+            is.na(dir[x, y])
+            ) {
+          FLOW[x, y] <<- FLOW[x, y] + seeds
+          seeds <- 0
+        } else {
+          dep <- round( seeds * dep[x, y] )
+          FLOW[x, y] <<- dep
+          seeds <- seeds - dep
+        }
+        if (seeds > 0)
+          {
+            switch(
+                   dir[x, y],
+                   {x <- x    ; y <- y - 1}, # 1
+                   {x <- x + 1; y <- y    }, # 2
+                   {x <- x + 1; y <- y    }, # 3
+                   {x <- x + 1; y <- y    }, # 4
+                   {x <- x    ; y <- y + 1}, # 5
+                   {x <- x - 1; y <- y + 1}, # 6
+                   {x <- x - 1; y <- y + 1}, # 7
+                   {x <- x - 1; y <- y    }, # 8
+                   {stop("Wrong number for dir!")}
+                   )
+            if (seeds > 1)
+              {
+                .flowNext(x, y, seeds, dep, dir)
+              }
+          }
+        return(list(x, y, seeds))
+      }
+    ## #####################
+    
+    names(depRates) <- c("depDegrees", "depRates")
+    ## read slope layer
+    slope <- readRAST6(
+                       slope,
+                       NODATA = -1
+                       )
+    slope.m <- matrix(
+                      slope[[1]],
+                      nrow=gridparameters(slope)$cells.dim[1],
+                      ncol=gridparameters(slope)$cells.dim[2]
+                      )
+    ## read flowdir layer
+    flowdir <- readRAST6(
+                         flowdir,
+                         NODATA = -1
+                         )
+    flowdir.m <- matrix(
+                        flowdir[[1]],
+                        nrow=gridparameters(flowdir)$cells.dim[1],
+                        ncol=gridparameters(flowdir)$cells.dim[2]
+                        )
+    ## calculate deposit rates (depRate)
+    depRate <- slope
+    depRate[[1]] <- cut(
+                        x      = slope[[1]],
+                        breaks = depRates$depDegrees,
+                        labels = FALSE
+                        )
+    depRate[[1]] <- depRates$depRate[depRate[[1]]]
+    depRate.m <- matrix(
+                        depRate[[1]],
+                        nrow=gridparameters(depRate)$cells.dim[1],
+                        ncol=gridparameters(depRate)$cells.dim[2]
+                        )
+    ## Create output layer (seeds$output)
+    dep.m <- depRate.m
+    dep.m[] <- "0"
+  
+    ## calculate number of seeds to be dispersed into cells downstream
+    for (x in 1:nrow(flowdir.m))
+      {
+        cat(x, " ")
+        for (y in 1:ncol(flowdir.m))
+          {
+            if (isTRUE(depRate.m[x, y] > 0 & depRate.m[x,y] < 1))
+              {
+                FLOW[x, y] <<- FLOW[x, y] + seeds
+                seeds <- 0
+              } else {
+                dep <- "round( seeds * dep[x, y] )
+                FLOW[x, y] <<- dep
+                seeds <- seeds - dep
+              }
+            if (seeds > 0)
+              {
+                switch(
+                       dir[x, y],
+                       {x <- x    ; y <- y - 1}, # 1
+                       {x <- x + 1; y <- y    }, # 2
+                       {x <- x + 1; y <- y    }, # 3
+                       {x <- x + 1; y <- y    }, # 4
+                       {x <- x    ; y <- y + 1}, # 5
+                       {x <- x - 1; y <- y + 1}, # 6
+                       {x <- x - 1; y <- y + 1}, # 7
+                       {x <- x - 1; y <- y    }, # 8
+                       {stop("Wrong number for dir!")}
+                       )
+                if (seeds > 1)
+                  {
+                    .flowNext(x, y, seeds, dep, dir)
+                  }
+              }
+            path <- !is.na(FLOW)
+            seeds$output[path] <- as.vector(FLOW[path])
+            FLOW[path] <- NA
+          }
+      }
+  
+  }
+  cat( "\n" )
+  
+    ## seedsSoil[[1]][seedsSoil[[1]]==0] <- NA
+  
+    ## ## save seedsSoil layer
+    ## mode( seedsSoil[[1]] ) <- "double"
+    ## seedsSoil@proj4string <- parameter$proj4string
+    ## writeRAST6(
+    ##            seedsSoil,
+    ##            layerName(species, type="seedsSoil", year=parameter$year),
+    ##            NODATA = -1,
+    ##            zcol=1,
+    ##            overwrite = TRUE
+    ##            )
+  
+    ## ## g.remove( "rast=", tmpDispWater, ignore.stderr=TRUE )
+    ## execGRASS(
+    ##           cmd = "g.remove",
+    ##           parameter = list(
+    ##             rast = tmpDispWater
+    ##             ),
+    ##           ignore.stderr=!options("asmDebug")[[1]]
+    ##           )
+    
+    ## dummy output
+    r.mapcalc(output, " = ", "input")
+    return(output)
+  }
+  
+#+end_src
+
+#+results:
+
+
+* waterDispGRASS
+  :PROPERTIES:
+  :ARCHIVE_TIME: 2011-10-04 Tue 13:49
+  :ARCHIVE_FILE: ~/Documents/Projects/AlienSpread/trunc/seeddisp/disp.org
+  :ARCHIVE_OLPATH: seedDisp package/R
+  :ARCHIVE_CATEGORY: disp
+  :END:
+#+begin_src R  :eval nil :tangle ./pkg/R/waterDispGRASS.R :no-expand
+  ##' Water disperse seeds from a seed layer using GRASS
+  ##' 
+  ##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
+  ##' @name waterDispGRASS
+  ##' @title Dispersal of seeds by water
+  ##' 
+  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
+  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+  ##' @param slope \code{character} name of GRASS raster layer containing the slope in degrees
+  ##' @param flowdir \code{character} name of GRASS raster containing flow direction (in GRASS agnps format)
+  ##' @param depRates \code{matrix} where the first column are slope and the second column the responding deposit rates
+  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+  ##' @return \code{character} name of the output layer
+  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+  ##' @export 
+  ##' @callGraphPrimitives
+  waterDispGRASS <- function(input, output="waterDispSeeds", slope="slope", flowdir="flowdir", depRates, overwrite=FALSE) {
+    stop("TO BE IMPLEMENTED")
+  
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    }
+  #######################
+    names(depRates) <- c("depDegrees", "depRates")
+    ## Load seeds layer
+    seeds <- readRAST6(
+                       input,
+                       NODATA = -1
+                       )
+    seeds.m <- matrix(
+                      seeds[[1]],
+                      nrow=gridparameters(seeds)$cells.dim[1],
+                      ncol=gridparameters(seeds)$cells.dim[2]
+                      )
+    # seeds.m[is.na(seeds.m)] <- -1  
+    ## Load slope layer
+    slope <- readRAST6(
+                       slope,
+                       NODATA = -1
+                       )
+    slope.m <- matrix(
+                      slope[[1]],
+                      nrow=gridparameters(slope)$cells.dim[1],
+                      ncol=gridparameters(slope)$cells.dim[2]
+                      )
+    ## Load flowdir layer
+    flowdir <- readRAST6(
+                         flowdir,
+                         NODATA = -1
+                         )
+    
+    flowdir.m <- matrix(
+                        flowdir[[1]],
+                        nrow=gridparameters(flowdir)$cells.dim[1],
+                        ncol=gridparameters(flowdir)$cells.dim[2]
+                        )
+    ## calculate deposit rates (depRate)
+    depRate <- slope
+    depRate[[1]] <- cut(
+                        x      = slope[[1]],
+                        breaks = depRates$depDegrees,
+                        labels = FALSE
+                        )
+    depRate[[1]] <- depRates$depRate[depRate[[1]]]
+    depRate.m <- matrix(
+                        depRate[[1]],
+                        nrow=gridparameters(depRate)$cells.dim[1],
+                        ncol=gridparameters(depRate)$cells.dim[2]
+                        )
+    ## Create output layer (seeds$output)
+    seeds$output <- NA
+    output.m <- seeds.m
+    output.m[] <- 0
+    
+    ## calculate number of seeds to be dispersed into cells downstream
+    ## TODO add filters to only calculate relevant cells
+  
+    seedsDep.m <- ceiling(depRate.m * seeds.m)
+    output.m <- output.m + seedsDep.m
+    seeds.m <- seeds.m - seedsDep.m
+    seeds.m[seeds.m < 0] <- 0
+    seeds.m <- shiftMbyAgnps(seeds.m, agnps)
+  
+    
+  } 
+#+end_src
+

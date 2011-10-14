@@ -1,1 +1,2 @@
-export(windDisp)
+useDynLib(seedDisp)
+exportPattern("^[[:alpha:]]+")

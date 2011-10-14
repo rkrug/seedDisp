@@ -8,11 +8,13 @@
 ##' @param SD2D \code{matrix} defining the 2D seed dispersal kernel 
 ##' @param SEEDS \code{matrix} specifying the number of seeds to be dispersed
 ##' @param MASK \code{matrix} defining the area in which processing takes place (\code{!is.na(MASK)}) 
+##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NA, otherwise NA to 0
 ##' @return \code{matrix} of same size as SEEDS containing the dispersed seeds
 ##' @author Rainer M Krug \email{Rainer@@krugs.de}
 ##' @export 
 ##' @callGraphPrimitives
-windDisp <- function(SD2D, SEEDS, MASK) {
+##' @useDynLib seedDisp
+windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
   ## Calculate size parameter of sd2D
   dx2 <- (ncol(SD2D) - 1)
   dy2 <- (nrow(SD2D) - 1)
@@ -24,15 +26,19 @@ windDisp <- function(SD2D, SEEDS, MASK) {
   buffer <- matrix(NA, ncol=ncol(SEEDS), nrow=dy)
   SEEDS <- rbind(buffer, SEEDS, buffer)
   ## call C++ function
-  return(
-         .Call(
+  output <- .Call(
                "windDispCpp",
                dx2,
                dy2,
                SD2D,
                SEEDS,
                MASK,
-               PACKAGE = "windDispCpp"
+               PACKAGE = "seedDisp"
                )
-         )
+  if (zeroToNULL) {
+    output[output==0] <- NA
+  } else {
+    output[is.na(output)] <- 0
+  }
+  return(output)
 }
