@@ -1,0 +1,10 @@
+.#*
+#*
+*#
+*~
+*#seedDisp.*
+seedDisp.*
+!seedDisp.org*
+*.o
+*.so
+*.rds

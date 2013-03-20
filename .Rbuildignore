@@ -1,0 +1,7 @@
+.git
+^.*\\.org$
+^seeddisp.
+.gitignore
+library
+version
+postTangleScript.sh

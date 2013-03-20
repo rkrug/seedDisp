@@ -1,5 +1,3 @@
-# -*- eval: (add-hook 'org-babel-post-tangle-hook( lambda () (call-process-shell-command "./postTangleScript.sh" nil 0 nil); -*-
-
 #+TITLE:     seedDisp.org
 #+AUTHOR:    Charles C. Berry    
 #+EMAIL:     cberry@tajo.ucsd.edu
@@ -23,11 +21,13 @@
 #+STARTUP: nohidestars hideblocks
 
 :BABEL:
-#+BABEL: :padline no
-#+BABEL: :comments no
-#+BABEL: :var MAINVERSION=0
-#+BABEL: :var SVNVERSION=(vc-working-revision (buffer-file-name))
-#+BABEL: :var SVNSTATE=(if (eq (vc-state (or (buffer-file-name) org-current-export-file)) 'up-to-date) 0 13)
+#+PROPERTY: padline no
+#+PROPERTY: comments no
+#+PROPERTY: var MAINVERSION=0
+#+PROPERTY: var+ MINORVERSION=4
+#+PROPERTY: var+ PATCHVERSION=13
+#+PROPERTY: var+ GITHASH="testhash" 
+#+PROPERTY: var+ GITCOMMITDATE="testdate"
 :END:
 
 :HTMLHEADER:
@@ -63,33 +63,74 @@ Org-babel support for building
 
 ** Post tangle script
 #+begin_src sh :results output :tangle ./postTangleScript.sh :var VER=(vc-working-revision (buffer-file-name)) :var STATE=(vc-state (or (buffer-file-name) org-current-export-file))
-  sed -i s/MAINVERSION/$MAINVERSION/ ./pkg/DESCRIPTION
-  sed -i s/SVNVERSION/$SVNVERSION/ ./pkg/DESCRIPTION
-  sed -i s/SVNSTATE/$SVNSTATE/ ./pkg/DESCRIPTION
-  sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./pkg/DESCRIPTION
+  sed -i s/MAINVERSION/$MAINVERSION/ ./DESCRIPTION
+  sed -i s/MINORVERSION/$MINORVERSION/ ./DESCRIPTION
+  sed -i s/PATCHVERSION/$PATCHVERSION/ ./DESCRIPTION
+  sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./DESCRIPTION
 
-  sed -i s/MAINVERSION/$MAINVERSION/ ./pkg/seedDisp-package.R
-  sed -i s/SVNVERSION/$SVNVERSION/ ./pkg/seedDisp-package.R
-  sed -i s/SVNSTATE/$SVNSTATE/ ./pkg/seedDisp-package.R
-  sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./pkg/seedDisp-package.R
+  sed -i s/MAINVERSION/$MAINVERSION/ ./seedDisp-package.R
+  sed -i s/MINORVERSION/$MINORVERSION/ ./seedDisp-package.R
+  sed -i s/PATCHVERSION/$PATCHVERSION/ ./seedDisp-package.R
+  sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./seedDisp-package.R
 
   Rscript -e "library(roxygen2);roxygenize('pkg', roxygen.dir='pkg', copy.package=FALSE, unlink.target=FALSE)"
+  rm -f ./postTangleScript.sh
 #+end_src
 
 #+results:
-: Updating collate directive in  /home/rkrug/Documents/Projects/R-Packages/seeddisp/pkg/DESCRIPTION 
+: Updating collate directive in  /home/rkrug/Documents/Projects/R-Packages/seeddisp/DESCRIPTION 
 : Updating namespace directives
 
 
-* seedDisp package
-** Package description
-#+begin_src R :eval nil :tangle ./pkg/seedDisp-package.R :shebang :padline no :no-expand :comments no
+* gitignore file (./.gitignore)
+:PROPERTIES:
+:tangle: ./.gitignore
+:comments: no
+:no-expand: TRUE
+:shebang:
+:padline: no
+:END: 
+#+begin_src gitignore
+  .#*
+  #*
+  *#
+  *~
+  *#seedDisp.*
+  seedDisp.*
+  !seedDisp.org*
+  *.o
+  *.so
+  *.rds
+#+end_src
+
+* Rbuildignore file (./.Rbuildignore)
+:PROPERTIES:
+:tangle: ./.Rbuildignore
+:comments: no
+:no-expand: TRUE
+:shebang:
+:padline: no
+:END: 
+#+begin_src fundamental
+  .git
+  ^.*\\.org$
+  ^seedDisp.
+  .gitignore
+  library
+  version
+  postTangleScript.sh
+#+end_src
+
+
+
+* Package description
+#+begin_src R :eval nil :tangle ./seedDisp-package.R :shebang :padline no :no-expand :comments no
   ##' Disperses seeds by using different routines
   ##' 
   ##' \tabular{ll}{
   ##' Package: \tab seedDisp\cr
   ##' Type: \tab Package\cr
-  ##' Version: \tab MAINVERSION.SVNVERSION.SVNSTATE\cr
+  ##' Version: \tab MAINVERSION.MINORVERSION.PATCHVERSION\cr
   ##' Date: \tab TODAYSDATE\cr
   ##' License: \tab GPL (>= 2)\cr
   ##' LazyLoad: \tab yes\cr
@@ -100,12 +141,12 @@ Org-babel support for building
   NULL
 #+end_src
 
-** DESCRIPTION
-#+begin_src R :tangle ./pkg/DESCRIPTION :shebang :padline no :no-expand :comments no
+* DESCRIPTION
+#+begin_src R :tangle ./DESCRIPTION :shebang :padline no :no-expand :comments no
   Package: seedDisp
   Type: Package
   Title: Dispersal of seed routines
-  Version: MAINVERSION.SVNVERSION-SVNSTATE
+  Version: MAINVERSION.MINORVERSION-PATCHVERSION
   Date: TODAYSDATE
   Author: Rainer M. Krug
   Maintainer: Rainer M Krug <Rainer@krugs.de>
@@ -113,22 +154,21 @@ Org-babel support for building
   License: GPL-3
   LazyLoad: yes
   Depends: Rcpp, spgrass6
-  LinkingTo: Rcpp
-  
+  LinkingTo: Rcpp  
 #+end_src
 
-** NAMESPACE
-#+begin_src R :tangle ./pkg/NAMESPACE :shebang :padline no :no-expand :comments no
+* NAMESPACE
+#+begin_src R :tangle ./NAMESPACE :shebang :padline no :no-expand :comments no
   useDynLib(seedDisp)
   exportPattern("^[[:alpha:]]+")
 #+end_src
 
 #+results:
 
-** R
-*** Wind dispersal
-**** windDisp
-#+begin_src R :eval nil :tangle ./pkg/R/windDisp.R :no-expand
+* R
+** Wind dispersal
+*** windDisp
+#+begin_src R :eval nil :tangle ./R/windDisp.R :no-expand
   ##' Disperses seeds from a seed \code{matrix} by using a
   ##' 2 dimensional dispersal \code{matrix}
   ##'
@@ -176,8 +216,8 @@ Org-babel support for building
   
 #+end_src
 
-**** windDispGRASS
-#+begin_src R :eval nil :tangle ./pkg/R/windDispGRASS.R :no-expand
+*** windDispGRASS
+#+begin_src R :eval nil :tangle ./R/windDispGRASS.R :no-expand
   ##' Disperses seeds from a seed \code{matrix} by using a
   ##' 2 dimensional dispersal \code{matrix}
   ##' and doing the calculations based on raster in GRASS
@@ -240,9 +280,9 @@ Org-babel support for building
   
 #+end_src
 
-*** Local dispersal
-**** localDispGRASS
-#+begin_src R  :eval nil :tangle ./pkg/R/localDispGRASS.R :no-expand
+** Local dispersal
+*** localDispGRASS
+#+begin_src R  :eval nil :tangle ./R/localDispGRASS.R :no-expand
   ##' Locally disperse seeds from a seed layer using GRASS
   ##' 
   ##' @usage localDispGRASS(input, output, overwrite)
@@ -331,9 +371,9 @@ Org-babel support for building
   
 #+end_src
 
-*** Bird dispersal
-**** birdDispGRASS
-#+begin_src R  :eval nil :tangle ./pkg/R/birdDispGRASS.R :no-expand
+** Bird dispersal
+*** birdDispGRASS
+#+begin_src R  :eval nil :tangle ./R/birdDispGRASS.R :no-expand
   ##' Bird disperse seeds from a seed layer using GRASS
   ##' 
   ##' @usage birdDispGRASS(input, output, overwrite)
@@ -388,8 +428,8 @@ Org-babel support for building
   
 #+end_src
 
-*** Water dispersal
-**** waterDisp
+** Water dispersal
+*** waterDisp
 This function will convert the apnps direction from GRASS into index differences for a R matrix
 
 - From GRASS :: agnps based
@@ -419,7 +459,7 @@ This function will convert the apnps direction from GRASS into index differences
 | [x-1, y+1] | [x, y+1] | [x+1, y+1] |
 |------------+----------+------------|
 
-#+begin_src R  :eval nil :tangle ./pkg/R/waterDisp.R :no-expand
+#+begin_src R  :eval nil :tangle ./R/waterDisp.R :no-expand
   ##' Flow cells in m by one cell usind the direction given in agnps and adds the
   ##' 
   ##' @usage waterDisp(m, agnps, depRate)
@@ -511,8 +551,8 @@ This function will convert the apnps direction from GRASS into index differences
   }
 #+end_src
 
-**** waterDispGRASS
-#+begin_src R  :eval nil :tangle ./pkg/R/waterDispGRASS.R :no-expand
+*** waterDispGRASS
+#+begin_src R  :eval nil :tangle ./R/waterDispGRASS.R :no-expand
   ##' Water disperse seeds from a seed layer using GRASS
   ##' 
   ##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
@@ -608,12 +648,12 @@ This function will convert the apnps direction from GRASS into index differences
   
 #+end_src
 
-** src
+* src
 :PROPERTIES:
 :no-expand: true
 :END:
-*** Makevars
-#+begin_src sh :results silent :tangle ./pkg/src/Makevars :eval nil
+** Makevars
+#+begin_src sh :results silent :tangle ./src/Makevars :eval nil
   ## Use the R_HOME indirection to support installations of multiple R version
   PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"`
   
@@ -643,13 +683,13 @@ This function will convert the apnps direction from GRASS into index differences
   
 #+end_src
 
-*** Makevars.win
-#+begin_src sh :results silent :tangle ./pkg/src/Makevars.win :eval nil
+** Makevars.win
+#+begin_src sh :results silent :tangle ./src/Makevars.win :eval nil
   ## Use the R_HOME indirection to support installations of multiple R version
   PKG_LIBS = $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "Rcpp:::LdFlags()")
 #+end_src
-*** windDispCpp.h
-#+begin_src c++ :tangle ./pkg/src/windDispCpp.h
+** windDispCpp.h
+#+begin_src c++ :tangle ./src/windDispCpp.h
   #ifndef _test_WINDDISPCPP_H
   #define _test_WINDDISPCPP_H
   
@@ -675,8 +715,8 @@ This function will convert the apnps direction from GRASS into index differences
   
 #+end_src
 
-*** windDispCpp.cpp
-#+BEGIN_SRC c++ :tangle ./pkg/src/windDispCpp.cpp
+** windDispCpp.cpp
+#+BEGIN_SRC c++ :tangle ./src/windDispCpp.cpp
   #include "windDispCpp.h"
   
   SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
@@ -725,6 +765,7 @@ This function will convert the apnps direction from GRASS into index differences
   }
 #+END_SRC
 
+
 * package management
 ** check package
 #+begin_src sh :results output
@@ -738,7 +779,7 @@ This function will convert the apnps direction from GRASS into index differences
  * using R version 2.13.2 (2011-09-30)
  * using platform: i686-pc-linux-gnu (32-bit)
  * using session charset: UTF-8
- * checking for file ‘pkg/DESCRIPTION’ ... OK
+ * checking for file ‘DESCRIPTION’ ... OK
  * checking extension type ... Package
  * this is package ‘seedDisp’ version ‘0.0-13’
  * checking package namespace information ... OK
@@ -881,19 +922,10 @@ for details
 ** build package
 
 #+begin_src sh :results output
-R CMD build pkg
+  R CMD build ./
 #+end_src
 
 #+results:
-: * checking for file ‘pkg/DESCRIPTION’ ... OK
-: * preparing ‘seedDisp’:
-: * checking DESCRIPTION meta-information ... OK
-: * cleaning src
-: * checking for LF line-endings in source and make files
-: * checking for empty or unneeded directories
-: Removed empty directory ‘seedDisp/inst/doc’
-: Removed empty directory ‘seedDisp/inst’
-: * building ‘seedDisp_0.0-13.tar.gz’
 
 
 
@@ -942,18 +974,18 @@ grep 'require(' R/*
 : #+results: rbi
 #+results: rbi
 : Rpackage.*
-: SVNSTATE
+: PATCHVERSION
 : MAINVERSION
-: SVNVERSION
+: MINORVERSION
 
 Only need to run this once (unless you add more ignorable files).
 
 #+begin_src R :results output silent :var rbld=rbi 
 dir.create("./seedDisp")
-cat(rbld,'\n', file="./pkg/.Rbuildignore")
-dir.create("./pkg/man")
-dir.create("./pkg/R")
-dir.create("./pkg/src")
+cat(rbld,'\n', file="./.Rbuildignore")
+dir.create("./man")
+dir.create("./R")
+dir.create("./src")
 dir.create("./Rlib")
 #+end_src
 
@@ -1080,21 +1112,21 @@ svn update
 #+results:
 #+begin_example
   l   w   b     fn
-  46  182 1257 ./pkg/src/windDispCpp.cpp
-  22  108  681 ./pkg/src/windDispCpp.h
-  22   56  468 ./pkg/man/disp-package.Rd
-  28  104  718 ./pkg/man/windDisp.Rd
-  36  166 1148 ./pkg/R/windDisp.R
-   2    2   51 ./pkg/NAMESPACE
-  12   39  323 ./pkg/DESCRIPTION
-   3   19  172 ./pkg/src/Makevars.win
-  26  147  960 ./pkg/src/Makevars
+  46  182 1257 ./src/windDispCpp.cpp
+  22  108  681 ./src/windDispCpp.h
+  22   56  468 ./man/disp-package.Rd
+  28  104  718 ./man/windDisp.Rd
+  36  166 1148 ./R/windDisp.R
+   2    2   51 ./NAMESPACE
+  12   39  323 ./DESCRIPTION
+   3   19  172 ./src/Makevars.win
+  26  147  960 ./src/Makevars
   25   43  463 ./postTangleScript.sh
  222  866 6241 total
 Sending        disp.org
-Sending        pkg/.Rbuildignore
-Sending        pkg/DESCRIPTION
-Sending        pkg/R/windDisp.R
+Sending        .Rbuildignore
+Sending        DESCRIPTION
+Sending        R/windDisp.R
 Sending        postTangleScript.sh
 Transmitting file data .....
 Committed revision 6.
