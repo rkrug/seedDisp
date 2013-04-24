@@ -3,8 +3,9 @@
 #+EMAIL:     cberry@tajo.ucsd.edu
 #+DATE:      2010-12-08 Thur
 #+DESCRIPTION: R Package Development Helpers
-
 #+KEYWORDS: 
+
+:CONFIG:
 #+LANGUAGE:  en
 #+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:nil skip:nil d:nil todo:t pri:nil tags:not-in-toc
@@ -16,20 +17,10 @@
 
 #+TODO: TODO OPTIMIZE TOGET COMPLETE WAIT VERIFY CHECK CODE DOCUMENTATION | DONE RECEIVED CANCELD 
 
-#+STARTUP: hidestars hideblocks
+#+STARTUP: indent hidestars nohideblocks
 #+DRAWERS: HIDDEN PROPERTIES STATE CONFIG BABEL OUTPUT LATEXHEADER HTMLHEADER
 #+STARTUP: nohidestars hideblocks
-
-:BABEL:
-#+PROPERTY: padline no
-#+PROPERTY: comments no
-#+PROPERTY: var MAINVERSION=0
-#+PROPERTY: var+ MINORVERSION=4
-#+PROPERTY: var+ PATCHVERSION=13
-#+PROPERTY: var+ GITHASH="testhash" 
-#+PROPERTY: var+ GITCOMMITDATE="testdate"
 :END:
-
 :HTMLHEADER:
 #+begin_html
   <div id="subtitle" style="float: center; text-align: center;">
@@ -45,8 +36,42 @@ Org-babel support for building
   </div>
 #+end_html
 :END:
+:LATEXHEADER:
+#+LATEX_HEADER: \usepackage{rotfloat}
+#+LATEX_HEADER: \definecolor{light-gray}{gray}{0.9}
+#+LATEX_HEADER: \lstset{%
+#+LATEX_HEADER:     basicstyle=\ttfamily\footnotesize,       % the font that is used for the code
+#+LATEX_HEADER:     tabsize=4,                       % sets default tabsize to 4 spaces
+#+LATEX_HEADER:     numbers=left,                    % where to put the line numbers
+#+LATEX_HEADER:     numberstyle=\tiny,               % line number font size
+#+LATEX_HEADER:     stepnumber=0,                    % step between two line numbers
+#+LATEX_HEADER:     breaklines=true,                 %!! don't break long lines of code
+#+LATEX_HEADER:     showtabs=false,                  % show tabs within strings adding particular underscores
+#+LATEX_HEADER:     showspaces=false,                % show spaces adding particular underscores
+#+LATEX_HEADER:     showstringspaces=false,          % underline spaces within strings
+#+LATEX_HEADER:     keywordstyle=\color{blue},
+#+LATEX_HEADER:     identifierstyle=\color{black},
+#+LATEX_HEADER:     stringstyle=\color{green},
+#+LATEX_HEADER:     commentstyle=\color{red},
+#+LATEX_HEADER:     backgroundcolor=\color{light-gray},   % sets the background color
+#+LATEX_HEADER:     columns=fullflexible,  
+#+LATEX_HEADER:     basewidth={0.5em,0.4em}, 
+#+LATEX_HEADER:     captionpos=b,                    % sets the caption position to `bottom'
+#+LATEX_HEADER:     extendedchars=false              %!?? workaround for when the listed file is in UTF-8
+#+LATEX_HEADER: }
+:END:
+:BABEL:
+#+PROPERTY: exports code
+#+PROPERTY: comments yes
+#+PROPERTY: padline no
+#+PROPERTY: var MAJORVERSION=0
+#+PROPERTY: var+ MINORVERSION=4
+#+PROPERTY: var+ PATCHVERSION=13
+#+PROPERTY: var+ GITHASH="testhash" 
+#+PROPERTY: var+ GITCOMMITDATE="testdate"
+:END:
 
-* Internal configurations                                          :noexport:
+* Internal configurations                      :noexport:
 ** Evaluate to run post tangle script
 #+begin_src emacs-lisp :results silent :tangle no :exports none
   (add-hook 'org-babel-post-tangle-hook
@@ -63,12 +88,12 @@ Org-babel support for building
 
 ** Post tangle script
 #+begin_src sh :results output :tangle ./postTangleScript.sh :var VER=(vc-working-revision (buffer-file-name)) :var STATE=(vc-state (or (buffer-file-name) org-current-export-file))
-  sed -i s/MAINVERSION/$MAINVERSION/ ./DESCRIPTION
+  sed -i s/MAJORVERSION/$MAJORVERSION/ ./DESCRIPTION
   sed -i s/MINORVERSION/$MINORVERSION/ ./DESCRIPTION
   sed -i s/PATCHVERSION/$PATCHVERSION/ ./DESCRIPTION
   sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./DESCRIPTION
 
-  sed -i s/MAINVERSION/$MAINVERSION/ ./seedDisp-package.R
+  sed -i s/MAJORVERSION/$MAJORVERSION/ ./seedDisp-package.R
   sed -i s/MINORVERSION/$MINORVERSION/ ./seedDisp-package.R
   sed -i s/PATCHVERSION/$PATCHVERSION/ ./seedDisp-package.R
   sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./seedDisp-package.R
@@ -103,6 +128,26 @@ Org-babel support for building
   *.rds
 #+end_src
 
+* Git Revision info
+Complete version info
+#+begin_src sh :exports results :results output replace 
+  echo "Version     : " $MAJORVERSION.$MINORVERSION-$PATCHVERSION
+  echo "Commit date : " `git show -s --format="%ci" HEAD`
+  echo "git HASH    : " `git rev-parse HEAD`
+  echo "git status  : "
+  git status
+#+end_src
+
+#+RESULTS:
+: Version     :  .4-13
+: Commit date :  2013-03-20 18:33:21 +0100
+: git HASH    :  906d085c35b4b835082e4583c4134c5ddf7f1555
+: git status  : 
+: # On branch master
+: nothing to commit, working directory clean
+
+
+
 * Rbuildignore file (./.Rbuildignore)
 :PROPERTIES:
 :tangle: ./.Rbuildignore
@@ -130,7 +175,7 @@ Org-babel support for building
   ##' \tabular{ll}{
   ##' Package: \tab seedDisp\cr
   ##' Type: \tab Package\cr
-  ##' Version: \tab MAINVERSION.MINORVERSION.PATCHVERSION\cr
+  ##' Version: \tab MAJORVERSION.MINORVERSION.PATCHVERSION\cr
   ##' Date: \tab TODAYSDATE\cr
   ##' License: \tab GPL (>= 2)\cr
   ##' LazyLoad: \tab yes\cr
@@ -141,12 +186,13 @@ Org-babel support for building
   NULL
 #+end_src
 
-* DESCRIPTION
-#+begin_src R :tangle ./DESCRIPTION :shebang :padline no :no-expand :comments no
+* Package Files
+** DESCRIPTION
+#+begin_src fundamental
   Package: seedDisp
   Type: Package
   Title: Dispersal of seed routines
-  Version: MAINVERSION.MINORVERSION-PATCHVERSION
+  Version: MAJORVERSION.MINORVERSION-PATCHVERSION
   Date: TODAYSDATE
   Author: Rainer M. Krug
   Maintainer: Rainer M Krug <Rainer@krugs.de>
@@ -157,15 +203,16 @@ Org-babel support for building
   LinkingTo: Rcpp  
 #+end_src
 
-* NAMESPACE
-#+begin_src R :tangle ./NAMESPACE :shebang :padline no :no-expand :comments no
+** NAMESPACE
+#+begin_src R
   useDynLib(seedDisp)
   exportPattern("^[[:alpha:]]+")
 #+end_src
 
 #+results:
 
-* R
+
+* R directory (./R)
 ** Wind dispersal
 *** windDisp
 #+begin_src R :eval nil :tangle ./R/windDisp.R :no-expand
@@ -648,7 +695,7 @@ This function will convert the apnps direction from GRASS into index differences
   
 #+end_src
 
-* src
+* src directory (./src)
 :PROPERTIES:
 :no-expand: true
 :END:
@@ -765,8 +812,11 @@ This function will convert the apnps direction from GRASS into index differences
   }
 #+END_SRC
 
-
-* package management
+* TODO Tests
+Write test functions
+* TODO Vignette
+Write vignette
+* package management                                               :noexport:
 ** check package
 #+begin_src sh :results output
   CWD=`pwd`
@@ -975,7 +1025,7 @@ grep 'require(' R/*
 #+results: rbi
 : Rpackage.*
 : PATCHVERSION
-: MAINVERSION
+: MAJORVERSION
 : MINORVERSION
 
 Only need to run this once (unless you add more ignorable files).
@@ -996,141 +1046,6 @@ dir.create("./Rlib")
 : dir.create("../Rlib")
 : #+end_src
 
-* Tests and Tryouts
-:PROPERTIES:
-:tangle: no
-:END:
-- As part of developing a package one must try out some code and
-  perhaps develop some tests to be sure it does what it is supposed to
-  do.
-- Here is an easy-to-read tryout of the =count.rows= function:
-- You may need to edit or delete the =.libPaths= call to suit your
-  setup
-
-: #+begin_src R :session :results output :exports both
-:  .libPaths( new = "./Rlib")
-:   require( countRows ) 
-:   simple.df <- data.frame( diag(1:4), row.names=letters[ 1:4 ])
-:   repeated.df <- simple.df[ rep( 1:4, 4:1 ), ]
-:   simple.df
-:   count.rows( repeated.df )  
-: #+end_src
-
-* Version Control, Navigation, and setup tasks
-** list files for convenient navigation 
-
-- Use this if you do not use the =.org= document to keep the master for the
- source code
-- It is useful when in a terminal window on a remote machine, and speedbar
-  is not a good option. =C-u C-c C-o= or =Mouse-1= will open the file
-  point is on.
-
-#+begin_src R :results output verbatim :var cwd="."
-  cat(paste("file:",list.files(cwd,".*",recursive=TRUE),sep=''),sep='\n')
-#+end_src
-
-: #+begin_src R :results output verbatim :var cwd="."
-:   cat(paste("file:",list.files(cwd,".*",recursive=TRUE),sep=''),sep='\n')
-: #+end_src
-
-** Speedbar navigation
-
-- Use this if you do not use the =.org= document to keep the master for the
-  source code
-- Make speedbar stick to the package source directory by typing 't' in
-  its frame after executing this block:
-
-#+begin_src emacs-lisp :results output silent
-  (require 'speedbar)
-  (ess-S-initialize-speedbar)
-  ;; uncomment this line if it isn't in ~/.emacs:
-  ;; (add-to-list 'auto-mode-alist '("\\.Rd\\'" . Rd-mode))
-  (speedbar-add-supported-extension ".Rd")
-  (speedbar-add-supported-extension "NAMESPACE")
-  (speedbar-add-supported-extension "DESCRIPTION")
-  (speedbar 1)
-#+end_src
-
-
-
-: #+begin_src emacs-lisp :results output silent
-:   (require 'speedbar)
-:   (ess-S-initialize-speedbar)
-:   ;; uncomment this line if it isn't in ~/.emacs:
-:   ;; (add-to-list 'auto-mode-alist '("\\.Rd\\'" . Rd-mode))
-:   (speedbar-add-supported-extension ".Rd")
-:   (speedbar-add-supported-extension "NAMESPACE")
-:   (speedbar-add-supported-extension "DESCRIPTION")
-:   (speedbar 1)
-: #+end_src
-
-** Version Control
-
-- If you don't use svn, substitute the relevant version control
-  command in each block in this section
-
-- Each of these can be run by putting point on the headline then
-  keying =C-c C-v C-s y=
-
-- Possibly add --username=<> --password=<> to the svn commands
-
-*** svn list 
-
-- Show what files are version controlled
-
-#+begin_src sh :results output
-svn list --recursive 
-#+end_src
-
-: #+begin_src sh :results output
-: svn list --recursive 
-: #+end_src
-
-*** svn update 
-
-- Use at the start of each session to sync changes from other machines
-
-#+begin_src sh :results output
-svn update 
-#+end_src
-
-: #+begin_src sh :results output
-: svn update 
-: #+end_src
-
-*** svn commit
-
-- At the end of a day's work commit the changes
-
-#+begin_src sh :results output :var TANGLED=(org-babel-tangle) :tangle no
-  echo "  l   w   b     fn"
-  wc $TANGLED
-  ./postTangleScript.sh
-  svn commit  -m "edits"
-#+end_src
-
-#+results:
-#+begin_example
-  l   w   b     fn
-  46  182 1257 ./src/windDispCpp.cpp
-  22  108  681 ./src/windDispCpp.h
-  22   56  468 ./man/disp-package.Rd
-  28  104  718 ./man/windDisp.Rd
-  36  166 1148 ./R/windDisp.R
-   2    2   51 ./NAMESPACE
-  12   39  323 ./DESCRIPTION
-   3   19  172 ./src/Makevars.win
-  26  147  960 ./src/Makevars
-  25   43  463 ./postTangleScript.sh
- 222  866 6241 total
-Sending        disp.org
-Sending        .Rbuildignore
-Sending        DESCRIPTION
-Sending        R/windDisp.R
-Sending        postTangleScript.sh
-Transmitting file data .....
-Committed revision 6.
-#+end_example
 * Package structure and src languages                              :noexport:
 
 - The top level directory may contain these files (and others):
