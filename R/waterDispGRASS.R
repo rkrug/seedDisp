@@ -24,69 +24,69 @@ waterDispGRASS <- function(input, output="waterDispSeeds", slope="slope", flowdi
   names(depRates) <- c("depDegrees", "depRates")
   ## Load seeds layer
   seeds <- readRAST6(
-                     input,
-                     NODATA = -1
-                     )
+    input,
+    NODATA = -1
+    )
   seeds.m <- matrix(
-                    seeds[[1]],
-                    nrow=gridparameters(seeds)$cells.dim[1],
-                    ncol=gridparameters(seeds)$cells.dim[2]
-                    )
+    seeds[[1]],
+    nrow=gridparameters(seeds)$cells.dim[1],
+    ncol=gridparameters(seeds)$cells.dim[2]
+    )
   ## Calculate flow and deposit parameter
   ## read topo laywers
   slope <- readRAST6(
-                     slope,
-                     NODATA = -1
-                     )
+    slope,
+    NODATA = -1
+    )
   slope.m <- matrix(
-                    slope[[1]],
-                    nrow=gridparameters(slope)$cells.dim[1],
-                    ncol=gridparameters(slope)$cells.dim[2]
-                    )
+    slope[[1]],
+    nrow=gridparameters(slope)$cells.dim[1],
+    ncol=gridparameters(slope)$cells.dim[2]
+    )
   ##
   flowdir <- readRAST6(
-                       flowdir,
-                       NODATA = -1
-                       )
+    flowdir,
+    NODATA = -1
+    )
   
   flowdir.m <- matrix(
-                      flowdir[[1]],
-                      nrow=gridparameters(flowdir)$cells.dim[1],
-                      ncol=gridparameters(flowdir)$cells.dim[2]
-                      )
+    flowdir[[1]],
+    nrow=gridparameters(flowdir)$cells.dim[1],
+    ncol=gridparameters(flowdir)$cells.dim[2]
+    )
   ## calculate deposit rates (depRate)
   depRate <- slope
   depRate[[1]] <- cut(
-                      x      = slope[[1]],
-                      breaks = depRates$depDegrees,
-                      labels = FALSE
-                      )
+    x      = slope[[1]],
+    breaks = depRates$depDegrees,
+    labels = FALSE
+    )
   depRate[[1]] <- depRates$depRate[depRate[[1]]]
   depRate.m <- matrix(
-                      depRate[[1]],
-                      nrow=gridparameters(depRate)$cells.dim[1],
-                      ncol=gridparameters(depRate)$cells.dim[2]
-                      )
+    depRate[[1]],
+    nrow=gridparameters(depRate)$cells.dim[1],
+    ncol=gridparameters(depRate)$cells.dim[2]
+    )
   ## Create output layer (seeds$output)
   seeds$output <- NA
   FLOW <- seeds.m * NA
   seeds@data[[1]] <- as.vector(
-                               waterDisp(
-                                         input = seeds.m,
-                                         depRate = depRate.m,
-                                         agnps = flowdir.m,
-                                         zeroToNULL = zeroToNULL,
-                                         progress = TRUE)
-                               )
+    waterDisp(
+      input = seeds.m,
+      depRate = depRate.m,
+      agnps = flowdir.m,
+      zeroToNULL = zeroToNULL,
+      progress = TRUE)
+    )
   
   mode(seeds[[1]]) <- "double"
   ## seeds@proj4string <- parameter$proj4string
   writeRAST6(
-             seeds,
-             output,
-             NODATA = -1,
-             zcol=1,
-             overwrite = overwrite
-             )
+    seeds,
+    output,
+    NODATA = -1,
+    zcol=1,
+    overwrite = overwrite
+    )
   return(output)
 }

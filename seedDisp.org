@@ -87,7 +87,10 @@ Org-babel support for building
 #+end_src
 
 ** Post tangle script
-#+begin_src sh :results output :tangle ./postTangleScript.sh :var VER=(vc-working-revision (buffer-file-name)) :var STATE=(vc-state (or (buffer-file-name) org-current-export-file))
+:PROPERTIES:
+:tangle: postTangleScript.sh
+:END:
+#+begin_src sh :tangle postTangleScript.sh
   sed -i s/MAJORVERSION/$MAJORVERSION/ ./DESCRIPTION
   sed -i s/MINORVERSION/$MINORVERSION/ ./DESCRIPTION
   sed -i s/PATCHVERSION/$PATCHVERSION/ ./DESCRIPTION
@@ -99,12 +102,8 @@ Org-babel support for building
   sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./seedDisp-package.R
 
   Rscript -e "library(roxygen2);roxygenize('pkg', roxygen.dir='pkg', copy.package=FALSE, unlink.target=FALSE)"
-  rm -f ./postTangleScript.sh
+  # rm -f ./postTangleScript.sh
 #+end_src
-
-#+results:
-: Updating collate directive in  /home/rkrug/Documents/Projects/R-Packages/seeddisp/DESCRIPTION 
-: Updating namespace directives
 
 
 * gitignore file (./.gitignore)
@@ -188,6 +187,12 @@ Complete version info
 
 * Package Files
 ** DESCRIPTION
+:PROPERTIES:
+:tangle:   ./DESCRIPTION
+:padline: no 
+:no-expand: TRUE
+:comments: no
+:END:
 #+begin_src fundamental
   Package: seedDisp
   Type: Package
@@ -199,11 +204,17 @@ Complete version info
   Description: Collection of different seed dispersal routines.
   License: GPL-3
   LazyLoad: yes
-  Depends: Rcpp, spgrass6
+  Depends: Rcpp (>= 0.9.4), spgrass6
   LinkingTo: Rcpp  
 #+end_src
 
 ** NAMESPACE
+:PROPERTIES:
+:tangle:   ./NAMESPACE
+:padline: no 
+:no-expand: TRUE
+:comments: no
+:END:
 #+begin_src R
   useDynLib(seedDisp)
   exportPattern("^[[:alpha:]]+")
@@ -475,7 +486,7 @@ Complete version info
   
 #+end_src
 
-** Water dispersal
+** TODO Water dispersal
 *** waterDisp
 This function will convert the apnps direction from GRASS into index differences for a R matrix
 
@@ -531,9 +542,9 @@ This function will convert the apnps direction from GRASS into index differences
     dy <- c(-1, -1,  0, +1, +1, +1,  0, -1) # second index in matrix
     ## create index Matix
     im <- cbind(
-                rep(1:nrow(input), each=ncol(input)),
-                rep(1:ncol(input), nrow(input))
-                )
+      rep(1:nrow(input), each=ncol(input)),
+      rep(1:ncol(input), nrow(input))
+      )
     ## create "flowed" index matrix
     ## this matrix will contain the NEW locations of the cells
     ## Cells not included in ims will be set to NA, as nothing flows into them.
@@ -626,70 +637,70 @@ This function will convert the apnps direction from GRASS into index differences
     names(depRates) <- c("depDegrees", "depRates")
     ## Load seeds layer
     seeds <- readRAST6(
-                       input,
-                       NODATA = -1
-                       )
+      input,
+      NODATA = -1
+      )
     seeds.m <- matrix(
-                      seeds[[1]],
-                      nrow=gridparameters(seeds)$cells.dim[1],
-                      ncol=gridparameters(seeds)$cells.dim[2]
-                      )
+      seeds[[1]],
+      nrow=gridparameters(seeds)$cells.dim[1],
+      ncol=gridparameters(seeds)$cells.dim[2]
+      )
     ## Calculate flow and deposit parameter
     ## read topo laywers
     slope <- readRAST6(
-                       slope,
-                       NODATA = -1
-                       )
+      slope,
+      NODATA = -1
+      )
     slope.m <- matrix(
-                      slope[[1]],
-                      nrow=gridparameters(slope)$cells.dim[1],
-                      ncol=gridparameters(slope)$cells.dim[2]
-                      )
+      slope[[1]],
+      nrow=gridparameters(slope)$cells.dim[1],
+      ncol=gridparameters(slope)$cells.dim[2]
+      )
     ##
     flowdir <- readRAST6(
-                         flowdir,
-                         NODATA = -1
-                         )
+      flowdir,
+      NODATA = -1
+      )
     
     flowdir.m <- matrix(
-                        flowdir[[1]],
-                        nrow=gridparameters(flowdir)$cells.dim[1],
-                        ncol=gridparameters(flowdir)$cells.dim[2]
-                        )
+      flowdir[[1]],
+      nrow=gridparameters(flowdir)$cells.dim[1],
+      ncol=gridparameters(flowdir)$cells.dim[2]
+      )
     ## calculate deposit rates (depRate)
     depRate <- slope
     depRate[[1]] <- cut(
-                        x      = slope[[1]],
-                        breaks = depRates$depDegrees,
-                        labels = FALSE
-                        )
+      x      = slope[[1]],
+      breaks = depRates$depDegrees,
+      labels = FALSE
+      )
     depRate[[1]] <- depRates$depRate[depRate[[1]]]
     depRate.m <- matrix(
-                        depRate[[1]],
-                        nrow=gridparameters(depRate)$cells.dim[1],
-                        ncol=gridparameters(depRate)$cells.dim[2]
-                        )
+      depRate[[1]],
+      nrow=gridparameters(depRate)$cells.dim[1],
+      ncol=gridparameters(depRate)$cells.dim[2]
+      )
     ## Create output layer (seeds$output)
     seeds$output <- NA
     FLOW <- seeds.m * NA
     seeds@data[[1]] <- as.vector(
-                                 waterDisp(
-                                           input = seeds.m,
-                                           depRate = depRate.m,
-                                           agnps = flowdir.m,
-                                           zeroToNULL = zeroToNULL,
-                                           progress = TRUE)
-                                 )
+      waterDisp(
+        input = seeds.m,
+        depRate = depRate.m,
+        agnps = flowdir.m,
+        zeroToNULL = zeroToNULL,
+        progress = TRUE)
+      )
     
     mode(seeds[[1]]) <- "double"
     ## seeds@proj4string <- parameter$proj4string
     writeRAST6(
-               seeds,
-               output,
-               NODATA = -1,
-               zcol=1,
-               overwrite = overwrite
-               )
+      seeds,
+      output,
+      NODATA = -1,
+      zcol=1,
+      overwrite = overwrite
+      )
     return(output)
   }
   

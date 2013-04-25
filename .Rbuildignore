@@ -1,6 +1,6 @@
 .git
 ^.*\\.org$
-^seeddisp.
+^seedDisp.
 .gitignore
 library
 version

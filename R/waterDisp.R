@@ -22,9 +22,9 @@ waterDisp <- function(input, depRate, agnps, zeroToNULL=TRUE, progress=TRUE) {
   dy <- c(-1, -1,  0, +1, +1, +1,  0, -1) # second index in matrix
   ## create index Matix
   im <- cbind(
-              rep(1:nrow(input), each=ncol(input)),
-              rep(1:ncol(input), nrow(input))
-              )
+    rep(1:nrow(input), each=ncol(input)),
+    rep(1:ncol(input), nrow(input))
+    )
   ## create "flowed" index matrix
   ## this matrix will contain the NEW locations of the cells
   ## Cells not included in ims will be set to NA, as nothing flows into them.
