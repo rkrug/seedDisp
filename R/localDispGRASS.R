@@ -1,3 +1,4 @@
+## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*localDispGRASS][localDispGRASS:1]]
 ##' Locally disperse seeds from a seed layer using GRASS
 ##' 
 ##' @usage localDispGRASS(input, output, overwrite)
@@ -83,3 +84,4 @@ localDispGRASS <- function(input, output="localDispSeeds", zeroToNULL=TRUE, over
   ## return name of output layer
   return(output)
 }
+## localDispGRASS:1 ends here

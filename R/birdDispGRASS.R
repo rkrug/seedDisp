@@ -1,3 +1,4 @@
+## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*birdDispGRASS][birdDispGRASS:1]]
 ##' Bird disperse seeds from a seed layer using GRASS
 ##' 
 ##' @usage birdDispGRASS(input, output, overwrite)
@@ -49,3 +50,4 @@ birdDispGRASS <- function(input, output="birdDispSeeds", zeroToNULL=TRUE, overwr
   ## return name of output layer
   return(output)
 }
+## birdDispGRASS:1 ends here

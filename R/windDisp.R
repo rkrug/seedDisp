@@ -1,3 +1,4 @@
+## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*windDisp][windDisp:1]]
 ##' Disperses seeds from a seed \code{matrix} by using a
 ##' 2 dimensional dispersal \code{matrix}
 ##'
@@ -42,3 +43,4 @@ windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
   }
   return(output)
 }
+## windDisp:1 ends here

@@ -1,3 +1,4 @@
+## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*waterDispGRASS][waterDispGRASS:1]]
 ##' Water disperse seeds from a seed layer using GRASS
 ##' 
 ##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
@@ -90,3 +91,4 @@ waterDispGRASS <- function(input, output="waterDispSeeds", slope="slope", flowdi
     )
   return(output)
 }
+## waterDispGRASS:1 ends here

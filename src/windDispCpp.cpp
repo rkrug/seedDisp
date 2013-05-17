@@ -1,3 +1,4 @@
+// [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*windDispCpp.cpp][windDispCpp\.cpp:1]]
 #include "windDispCpp.h"
 
 SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
@@ -44,3 +45,4 @@ SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
 
   return wrap( dispSeeds );
 }
+// windDispCpp\.cpp:1 ends here

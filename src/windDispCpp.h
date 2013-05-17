@@ -1,3 +1,4 @@
+// [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*windDispCpp.h][windDispCpp\.h:1]]
 #ifndef _test_WINDDISPCPP_H
 #define _test_WINDDISPCPP_H
 
@@ -20,3 +21,4 @@ RcppExport SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MAS
 // definition
 
 #endif
+// windDispCpp\.h:1 ends here

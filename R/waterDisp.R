@@ -1,3 +1,4 @@
+## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*waterDisp][waterDisp:1]]
 ##' Flow cells in m by one cell usind the direction given in agnps and adds the
 ##' 
 ##' @usage waterDisp(m, agnps, depRate)
@@ -87,3 +88,4 @@ waterDisp <- function(input, depRate, agnps, zeroToNULL=TRUE, progress=TRUE) {
   }
   return(output.dep)
 }
+## waterDisp:1 ends here
