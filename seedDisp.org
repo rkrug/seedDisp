@@ -1,7 +1,8 @@
+# -*- org-babel-tangled-file: t; org-babel-tangle-run-postTangleScript: t; -*-
+
 #+TITLE:     seedDisp.org
-#+AUTHOR:    Charles C. Berry    
-#+EMAIL:     cberry@tajo.ucsd.edu
-#+DATE:      2010-12-08 Thur
+#+AUTHOR:    Rainer M Krug
+#+EMAIL:     Rainer@krugs.de
 #+DESCRIPTION: R Package Development Helpers
 #+KEYWORDS: 
 
@@ -91,15 +92,15 @@ Org-babel support for building
 :tangle: postTangleScript.sh
 :END:
 #+begin_src sh :tangle postTangleScript.sh
-  sed -i s/MAJORVERSION/$MAJORVERSION/ ./DESCRIPTION
-  sed -i s/MINORVERSION/$MINORVERSION/ ./DESCRIPTION
-  sed -i s/PATCHVERSION/$PATCHVERSION/ ./DESCRIPTION
-  sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./DESCRIPTION
+  sed -i '' s/MAJORVERSION/$MAJORVERSION/ ./DESCRIPTION
+  sed -i '' s/MINORVERSION/$MINORVERSION/ ./DESCRIPTION
+  sed -i '' s/PATCHVERSION/$PATCHVERSION/ ./DESCRIPTION
+  sed -i '' s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./DESCRIPTION
 
-  sed -i s/MAJORVERSION/$MAJORVERSION/ ./seedDisp-package.R
-  sed -i s/MINORVERSION/$MINORVERSION/ ./seedDisp-package.R
-  sed -i s/PATCHVERSION/$PATCHVERSION/ ./seedDisp-package.R
-  sed -i s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./seedDisp-package.R
+  sed -i '' s/MAJORVERSION/$MAJORVERSION/ ./seedDisp-package.R
+  sed -i '' s/MINORVERSION/$MINORVERSION/ ./seedDisp-package.R
+  sed -i '' s/PATCHVERSION/$PATCHVERSION/ ./seedDisp-package.R
+  sed -i '' s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./seedDisp-package.R
 
   Rscript -e "library(roxygen2);roxygenize('pkg', roxygen.dir='pkg', copy.package=FALSE, unlink.target=FALSE)"
   # rm -f ./postTangleScript.sh
