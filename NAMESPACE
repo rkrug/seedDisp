@@ -1,2 +1,2 @@
-useDynLib(seedDisp)
-exportPattern("^[[:alpha:]]+")
+  useDynLib(seedDisp)
+  exportPattern("^[[:alpha:]]+")

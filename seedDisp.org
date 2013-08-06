@@ -106,6 +106,8 @@ Org-babel support for building
   # rm -f ./postTangleScript.sh
 #+end_src
 
+#+RESULTS:
+
 
 * gitignore file (./.gitignore)
 :PROPERTIES:
@@ -195,18 +197,18 @@ Complete version info
 :comments: no
 :END:
 #+begin_src fundamental
-  Package: seedDisp
-  Type: Package
-  Title: Dispersal of seed routines
-  Version: MAJORVERSION.MINORVERSION-PATCHVERSION
-  Date: TODAYSDATE
-  Author: Rainer M. Krug
-  Maintainer: Rainer M Krug <Rainer@krugs.de>
-  Description: Collection of different seed dispersal routines.
-  License: GPL-3
-  LazyLoad: yes
-  Depends: Rcpp (>= 0.9.4), spgrass6
-  LinkingTo: Rcpp  
+Package: seedDisp
+Type: Package
+Title: Dispersal of seed routines
+Version: MAJORVERSION.MINORVERSION-PATCHVERSION
+Date: TODAYSDATE
+Author: Rainer M. Krug
+Maintainer: Rainer M Krug <Rainer@krugs.de>
+Description: Collection of different seed dispersal routines.
+License: GPL-3
+LazyLoad: yes
+Depends: Rcpp (>= 0.9.4), spgrass6
+LinkingTo: Rcpp  
 #+end_src
 
 ** NAMESPACE
@@ -479,224 +481,193 @@ Complete version info
   
 #+end_src
 
-** TODO Water dispersal
-*** waterDisp
-This function will convert the apnps direction from GRASS into index differences for a R matrix
-
-- From GRASS :: agnps based
-|---+---+---|
-| 8 | 1 | 2 |
-|---+---+---|
-| 7 |   | 3 | 
-|---+---+---|
-| 6 | 5 | 4 |
-|---+---+---|
-
-- In R matrix ::
-|---+---+---|
-| 6 | 5 | 4 |
-|---+---+---|
-| 7 |   | 3 | 
-|---+---+---|
-| 8 | 1 | 2 |
-|---+---+---|
-
-- In R matrix :: based on e.g. ~as.matrix(readGRASS6())~:
-|------------+----------+------------|
-| [x-1, y-1] | [x, y-1] | [x+1, y-1] |
-|------------+----------+------------|
-| [x-1, y  ] | [x, y  ] | [x+1, y  ] |
-|------------+----------+------------|
-| [x-1, y+1] | [x, y+1] | [x+1, y+1] |
-|------------+----------+------------|
-
-#+begin_src R  :eval nil :tangle ./R/waterDisp.R :no-expand
-  ##' Flow cells in m by one cell usind the direction given in agnps and adds the
-  ##' 
-  ##' @usage waterDisp(m, agnps, depRate)
-  ##' @name waterDisp
-  ##' @title Disperse seeds using water dispersal
-  ##' 
-  ##' @title Disperse seeds in \code{input} in direction given in \code{agnps} using deposit rates in \code{depRates} until all seeds are deposited
-  ##' @param input \code{matrix} of seeds to be dispersed by water flow
-  ##' @param depRate \code{matrix} of deposit rates
-  ##' @param agnps \code{matrix} of same dim=ension as \code{m} containing agnps flow directions as returned from GRASS of same dimensionality as \code{input}
-  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NA, otherwise NA to 0
-  ##' @param progress \code{boolean} if TRUE, showing progress, otherwise silent
-  ##' @param m \code{matrix} to be "flown" of same dimensionality as \code{input}
-  ##' @return 
-  ##' @author Rainer M Krug
-  ##' @export 
-  ##' @callGraphPrimitives
-  waterDisp <- function(input, depRate, agnps, zeroToNULL=TRUE, progress=TRUE) {
-    ## define vectors for flowing direction translation from agnps to matrix
-    ## agnps 1,  2,  3,  4,  5,  6,  7,  8) 
-    dx <- c( 0, +1, +1, +1,  0, -1, -1, -1) # first index in matrix
-    dy <- c(-1, -1,  0, +1, +1, +1,  0, -1) # second index in matrix
-    ## create index Matix
-    im <- cbind(
-      rep(1:nrow(input), each=ncol(input)),
-      rep(1:ncol(input), nrow(input))
-      )
-    ## create "flowed" index matrix
-    ## this matrix will contain the NEW locations of the cells
-    ## Cells not included in ims will be set to NA, as nothing flows into them.
-    ims <- im
-    ## calculate x-flow
-    ims[,1] <- im[,1] + dx[agnps[im]]
-    ## and correct for "out of matrix flows"
-    ims[,1][ims[,1] < 1      ] <- NA
-    ims[,1][ims[,1] > nrow(input)] <- NA
-    ## calculate y-flow
-    ims[,2] <- im[,2] + dy[agnps[im]]
-    ## and correct for "out of matrix flows"
-    ims[,2][ims[,2] < 1      ] <- NA
-    ims[,2][ims[,2] > ncol(input)] <- NA
-    ## remove all which have NA from im and ims
-    sel <- !is.na(ims[,1]) & !is.na(ims[,2])
-    im <- im[sel,]
-    ims <- ims[sel,]
-    ## build flowed matrix m
-    output.dep <- input
-    output.dep[] <- 0
-    output.disp <- input
-    ## populate output
-    j <- 0
-    ## call recursively, until the number of seeds in output.disp == 0
-    repeat {
-      ## set new input.disp to previous output.disp
-      input.disp <- output.disp
-      input.disp[is.na(input.disp)] <- 0
-      output.disp[] <- 0
-      ## define imX andimsX, as they will be modified in the while loop
-      imX <- im
-      imsX <- ims
-      j <- j+1
-      while (nrow(imsX) > 0) {
-        if (progress) {
-          print( paste(j, sum(output.disp, na.rm=TRUE),  sum(input.disp, na.rm=TRUE)) )
-        }
-        ## identify uniques
-        uni <- !duplicated(imsX)
-        ## calculate seeds to be leaving cell 
-        flow <-  ceiling( (1 - depRate[imX[uni,]]) * input.disp[imX[uni,]] )
-        ## subtract flowing seeds from initial cells
-        output.dep[imX[uni,]] <- output.dep[imX[uni,]] + ( input.disp[imX[uni,]] - flow )
-        ## add flowing seeds to target cells
-        output.disp[imsX[uni,]] <- output.disp[imsX[uni,]] + flow
-        ## take unique calls away and start again
-        imX  <- imX [!uni,]
-        imsX <- imsX[!uni,]
-      }
-      if (sum(output.disp, na.rm=TRUE) == 0) {
-        break()
-      }
-    }
-    ##
-    if (zeroToNULL) {
-      output.dep[output.dep==0] <- NA
-    } else {
-      output.dep[is.na(output.dep)] <- 0
-    }
-    return(output.dep)
-  }
-#+end_src
-
+** Water dispersal
 *** waterDispGRASS
 #+begin_src R  :eval nil :tangle ./R/waterDispGRASS.R :no-expand
-  ##' Water disperse seeds from a seed layer using GRASS
-  ##' 
-  ##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
-  ##' @name waterDispGRASS
-  ##' @title Dispersal of seeds by water
-  ##' 
-  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
-  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
-  ##' @param slope \code{character} name of GRASS raster layer containing the slope in degrees
-  ##' @param flowdir \code{character} name of GRASS raster containing flow direction (in GRASS agnps format)
-  ##' @param depRates \code{matrix} where the first column are slope and the second column the responding deposit rates
-  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
-  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NULL, otherwise NA to 0
-  ##' @param progress \code{boolean} if TRUE, showing progress, otherwise silent
-  ##' @return \code{character} name of the output layer
-  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
-  ##' @export 
-  ##' @callGraphPrimitives
-  waterDispGRASS <- function(input, output="waterDispSeeds", slope="slope", flowdir="flowdir", depRates, overwrite=FALSE, zeroToNULL=TRUE, progress=TRUE) {
+##' Water disperse seeds from a seed layer using GRASS
+##'
+##' The principle in this module is as follow:
+##' 1) calculate seeds which are deposited in cell and add these to the dispersedSeeds layer
+##' 2) disperse in each direction separately to avoid overlap
+##' 3) add up all dispersed seeds layers
+##' 4) repeat until all seeds are in the deposit layer
+##' 
+##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
+##' @name waterDispGRASS
+##' @title Dispersal of seeds by water
+##' 
+##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
+##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+##' @param flowdir \code{character} name of GRASS raster containing flow direction (in GRASS agnps format)
+##' @param depRates \code{character} name of GRASS raster layer cotaining the dsposit rates for each cell.
+##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+##' @return \code{character} name of the output layer
+##' @author Rainer M Krug \email{Rainer@@krugs.de}
+##' @export 
+##' @callGraphPrimitives
+waterDispGRASS <- function(
+    input,
+    output,
+    flowdir,
+    depRates, 
+    overwrite  = FALSE
+    ) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
-      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+        stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
-  #######################
-    names(depRates) <- c("depDegrees", "depRates")
-    ## Load seeds layer
-    seeds <- readRAST6(
-      input,
-      NODATA = -1
-      )
-    seeds.m <- matrix(
-      seeds[[1]],
-      nrow=gridparameters(seeds)$cells.dim[1],
-      ncol=gridparameters(seeds)$cells.dim[2]
-      )
-    ## Calculate flow and deposit parameter
-    ## read topo laywers
-    slope <- readRAST6(
-      slope,
-      NODATA = -1
-      )
-    slope.m <- matrix(
-      slope[[1]],
-      nrow=gridparameters(slope)$cells.dim[1],
-      ncol=gridparameters(slope)$cells.dim[2]
-      )
-    ##
-    flowdir <- readRAST6(
-      flowdir,
-      NODATA = -1
-      )
-    
-    flowdir.m <- matrix(
-      flowdir[[1]],
-      nrow=gridparameters(flowdir)$cells.dim[1],
-      ncol=gridparameters(flowdir)$cells.dim[2]
-      )
-    ## calculate deposit rates (depRate)
-    depRate <- slope
-    depRate[[1]] <- cut(
-      x      = slope[[1]],
-      breaks = depRates$depDegrees,
-      labels = FALSE
-      )
-    depRate[[1]] <- depRates$depRate[depRate[[1]]]
-    depRate.m <- matrix(
-      depRate[[1]],
-      nrow=gridparameters(depRate)$cells.dim[1],
-      ncol=gridparameters(depRate)$cells.dim[2]
-      )
-    ## Create output layer (seeds$output)
-    seeds$output <- NA
-    FLOW <- seeds.m * NA
-    seeds@data[[1]] <- as.vector(
-      waterDisp(
-        input = seeds.m,
-        depRate = depRate.m,
-        agnps = flowdir.m,
-        zeroToNULL = zeroToNULL,
-        progress = TRUE)
-      )
-    
-    mode(seeds[[1]]) <- "double"
-    ## seeds@proj4string <- parameter$proj4string
-    writeRAST6(
-      seeds,
-      output,
-      NODATA = -1,
-      zcol=1,
-      overwrite = overwrite
-      )
-    return(output)
-  }
-  
+
+    ## does one dispersal step and returns
+    ## TRUE if executed
+    ## FALSE if sum of stepInput is 0, i.e. no seeds to disperse
+    oneStep <- function(stepInput, stepDep, stepToDisp, stepFlowdir, stepDepRates) {
+        ## calculation of sum of seeds left to be dispersed
+        univ <- execGRASS("r.univar", map=stepInput, intern=TRUE)
+        sm <- grep("sum", univ, value=TRUE)
+        s <- as.numeric(strsplit( sm, split=": " )[[1]][2])
+        if ( s <= 0 ) {
+            return(FALSE)
+        } else {
+            ## Calculate seeds to be deposited in cell and set null values to 0
+            execGRASS(
+                "r.mapcalc",
+                expression = paste0(
+                    stepDep,
+                    " = ",
+                    "round(", stepInput, " * ", stepDepRates, ", 1)"
+                    )
+                )
+            execGRASS(
+                "r.null",
+                map = stepDep,
+                null = 0L
+                )
+            ##
+            
+            ## Calculate seeds to be dispersed and set null values to 0
+            execGRASS(
+                "r.mapcalc",
+                expression = paste0(
+                    "_tmp.wd.disp = ",
+                    "max( ", stepInput, " - ", stepDep, ", 0 )"
+                    )
+                )
+            execGRASS(
+                "r.null",
+                map = "_tmp.wd.disp",
+                null = 0L
+                )
+
+            ## combine expressions for r.mapcalc
+            mce <- paste0(
+                "_tmp.wd.into.", 1:8,
+                " = ",
+                "if( ", stepFlowdir, "[",
+                c(1,  1,  0, -1, -1, -1,  0,  1),
+                ", ",
+                c(0, -1, -1, -1,  0,  1,  1,  1),
+                " ] == ", 1:8,
+                ", _tmp.wd.disp[ ",
+                c(1,  1,  0, -1, -1, -1,  0,  1),
+                ", ",
+                c(0, -1, -1, -1,  0,  1,  1,  1),
+                " ], null() )"
+                ) 
+
+            ## calculate all and set null vaues to 0 
+            for (i in 1:length(mce)) {
+                execGRASS(
+                    "r.mapcalc",
+                    expression = mce[i]
+                    )
+                execGRASS(
+                    "r.null",
+                    map = paste0("_tmp.wd.into.", i),
+                    null = 0L
+                    )
+            }
+
+            ## and finally sum them up
+            execGRASS(
+                "r.mapcalc",
+                expression = paste0(
+                    stepToDisp,
+                    " = ",
+                    paste0("_tmp.wd.into.", c(1:8), collapse = " + ")
+                    ),
+                flags = "overwrite"
+                )
+            
+            ## and finally delete all temporary layers
+            execGRASS(
+                "g.mremove",
+                rast = "_tmp.wd.*",
+                flags = "f"
+                )
+            return(TRUE)
+        }
+    }
+
+    ## copy input in temporary input layer
+    execGRASS(
+        "g.copy",
+        rast = paste0(input, ",_tmp.wdout.input")
+        )
+    ## create empty deposit layer
+    execGRASS(
+        "r.mapcalc",
+        expression = "_tmp.wdout.dep.final = 0"
+        )
+    while (oneStep("_tmp.wdout.input", "_tmp.wdout.dep", "_tmp.wdout.disp", flowdir, depRates)) {
+        univ <- execGRASS("r.univar", map="_tmp.wdout.input", intern=TRUE)
+        sm <- grep("sum", univ, value=TRUE)
+        paste("############", as.numeric(strsplit( sm, split=": " )[[1]][2]), "############")
+        ## copy still to be dispersed seeds into temporary input layer
+        execGRASS(
+            "g.copy",
+            rast = "_tmp.wdout.disp,_tmp.wdout.input",
+            flags = "overwrite"
+            )
+        ## add the deposited seeds to the final deposit layer
+        execGRASS(
+            "r.mapcalc",
+            expression = "_tmp.wdout.dep.final = _tmp.wdout.dep.final + _tmp.wdout.dep",
+            flags = "overwrite"
+            )
+        ## remove _tmp.wdout.dep
+        execGRASS(
+            "g.remove",
+            rast = "_tmp.wdout.dep",
+            flags = "f"
+            )
+        ## and continue, i.e. execute oneStep() and repeat until oneStep returns FALSE
+        ## Then nothing needs to be done anymore
+    }  
+   
+    ## set 0 values to null and write temporary layer to output layer
+    execGRASS(
+        "r.null",
+        map = "_tmp.wdout.dep.final",
+        setnull = "0"
+        )
+    if (overwrite) {
+        fl <- "overwrite"
+    } else {
+        fl <- NULL
+    }
+    execGRASS(
+        "g.copy",
+        rast = paste0("_tmp.wdout.dep.final", ",", output),
+        flags = fl
+        )
+    ## and delete temporary layers
+    execGRASS(
+        "g.mremove",
+        rast = "_tmp.wdout.*",
+        flags = "f"
+        )
+    invisible(output)
+}
+
 #+end_src
 
 * src directory (./src)
