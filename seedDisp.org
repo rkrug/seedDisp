@@ -118,16 +118,17 @@ Org-babel support for building
 :padline: no
 :END: 
 #+begin_src gitignore
-  .#*
-  #*
-  *#
-  *~
-  *#seedDisp.*
-  seedDisp.*
-  !seedDisp.org*
-  *.o
-  *.so
-  *.rds
+.#*
+#*
+,*#
+,*~
+,*#seedDisp.*
+seedDisp.*
+!seedDisp.org*
+,*.o
+,*.so
+,*.rds
+/postTangleScript.sh
 #+end_src
 
 * Git Revision info
@@ -141,12 +142,19 @@ Complete version info
 #+end_src
 
 #+RESULTS:
-: Version     :  .4-13
-: Commit date :  2013-03-20 18:33:21 +0100
-: git HASH    :  906d085c35b4b835082e4583c4134c5ddf7f1555
-: git status  : 
-: # On branch master
-: nothing to commit, working directory clean
+#+begin_example
+Version     :  0.4-13
+Commit date :  2013-08-06 11:50:57 +0200
+git HASH    :  4b874b68a6e5159eab8e2c1206c809958fa554eb
+git status  : 
+# On branch master
+# Changes to be committed:
+#   (use "git reset HEAD <file>..." to unstage)
+#
+#	modified:   .gitignore
+#	modified:   seedDisp.org
+#
+#+end_example
 
 
 
@@ -230,23 +238,54 @@ LinkingTo: Rcpp
 ** Wind dispersal
 *** windDisp
 #+begin_src R :eval nil :tangle ./R/windDisp.R :no-expand
-  ##' Disperses seeds from a seed \code{matrix} by using a
-  ##' 2 dimensional dispersal \code{matrix}
-  ##'
-  ##' A \code{matrix} of the same size as SEEDS containing the dispersed seeds 
-  ##' @usage windDisp(SD2D, SEEDS, MASK)
-  ##' @name windDisp
-  ##' @title Dispersal of seeds by wind
-  ##' @param SD2D \code{matrix} defining the 2D seed dispersal kernel 
-  ##' @param SEEDS \code{matrix} specifying the number of seeds to be dispersed
-  ##' @param MASK \code{matrix} defining the area in which processing takes place (\code{!is.na(MASK)}) 
-  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NA, otherwise NA to 0
-  ##' @return \code{matrix} of same size as SEEDS containing the dispersed seeds
-  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
-  ##' @export 
-  ##' @callGraphPrimitives
-  ##' @useDynLib seedDisp
-  windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
+##' Disperses seeds from a matrix by using a 2 dimensional dispersal kernel
+##'
+##' This function uses a 2D seed dispersal kernel in form of a \code{matrix} to disperse seeds
+##' from a seed source in form of a \code{matrix} and returns a \code{matrix} of the same size
+##' containing the seed distribnution after the seeds in the original seed matrix are dispersed.
+##' 
+##' The function uses an inverse approach, by going over all cells and determining the number of
+##' seeds dispersed \bold{into} the cell from all the cells under the dispersel kernel.
+##' To calculate the number of seeds dispersed into each cell, the foolowing steps are done:
+##' 
+##' 1) The dispersal kernel is centered over the for which the number of seeds to be dispersed into
+##' will be calculated
+##' 
+##' 2) for each cell under the dispersal kernel \code{SD2D} the following is done
+##' 2.1) if the corresponding cell in MASK is \code{NA}, no seeds are dispersed into this cell
+##' 2.2) for each cell under the kernel \code{SD2D} binominal distributed random number is drawn with
+##'         \code{rbinom(noOfSeeds, probability)}
+##'         \code{size} : number of seeds in the cell from which the seeds orriginate
+##'         \code{prob} : probability from \code{SD2D} kernel of the corresponding cell
+##'      and summed up for the whole kernel
+##' 
+##' cell under the dispersel kernel in which MASK is not NA, the number of 
+##' cell in which the kernel and the number of seeds is larger then zero, and MASK is not NA, a
+##' random number following the binominal distribution is drawn.
+##'
+##' This function is implemented in C (\code{windDispCpp})
+##'
+##' The C function requires the seed raster to be buffered by half
+##' the width of the seed dispertsal kernel \code{SD2D} which is done
+##' in the function before calling the C function.
+##' 
+##' 
+##' @usage windDisp(SD2D, SEEDS, MASK)
+##' @name windDisp
+##' @title Dispersal of seeds by wind
+##' @param SD2D Sedd Dispersal kernel 2D - \code{matrix} defining the 2D seed dispersal kernel 
+##' @param SEEDS \code{matrix} specifying the number of seeds to be dispersed
+##' @param MASK \code{matrix} defining the area in which processing takes place (\code{!is.na(MASK)}) 
+##' @param zeroToNULL \code{boolean} if TRUE replace 0 with NA in the returned \code{matrix}, 
+##' otherwise all NA will be replaced with 0
+##' 
+##' @return \code{matrix} of same size as \code{SEEDS} containing the dispersed seeds
+##' @author Rainer M Krug \email{Rainer@@krugs.de}
+##' 
+##' @useDynLib seedDisp
+##' @export 
+
+windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
     ## Calculate size parameter of sd2D
     dx2 <- (ncol(SD2D) - 1)
     dy2 <- (nrow(SD2D) - 1)
@@ -259,169 +298,203 @@ LinkingTo: Rcpp
     SEEDS <- rbind(buffer, SEEDS, buffer)
     ## call C++ function
     output <- .Call(
-                 "windDispCpp",
-                 dx2,
-                 dy2,
-                 SD2D,
-                 SEEDS,
-                 MASK,
-                 PACKAGE = "seedDisp"
-                 )
+        "windDispCpp",
+        dx2,
+        dy2,
+        SD2D,
+        SEEDS,
+        MASK,
+        PACKAGE = "seedDisp"
+        )
     if (zeroToNULL) {
-      output[output==0] <- NA
+        output[output==0] <- NA
     } else {
-      output[is.na(output)] <- 0
+        output[is.na(output)] <- 0
     }
     return(output)
-  }
-  
+}
+
 #+end_src
 
 *** windDispGRASS
 #+begin_src R :eval nil :tangle ./R/windDispGRASS.R :no-expand
-  ##' Disperses seeds from a seed \code{matrix} by using a
-  ##' 2 dimensional dispersal \code{matrix}
-  ##' and doing the calculations based on raster in GRASS
-  ##'
-  ##' @usage windDisp(SD2D, input, output="windDispSeeds", overwrite=FALSE)
-  ##' @name windDispGRASS
-  ##' @title Dispersal of seeds by wind
-  ##' @param SD2D \code{matrix} defining the 2D seed dispersal kernel 
-  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
-  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
-  ##' @param zeroToNULL  \code{boolean} if TRUE convert zeros to NULL, otherwise NA to 0
-  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
-  ##' @return \code{character} name of the output layer
-  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
-  ##' @export 
-  ##' @callGraphPrimitives
-  windDispGRASS <- function(SD2D, input, output="windDispSeeds", zeroToNULL=TRUE, overwrite=FALSE) {
+##' Disperses seeds from a input raster layer in GRASS by using a 2 dimensional dispersal kernel \code{matrix}
+##' and stores the dispersed seeds in an output layer in RASS
+##'
+##' This function is a wrapper around \code{windDisp} to facilitate the usage of GRASS as a backend.
+##' It retrieves the raster from GRASS and stores the resulting layer in GRASS agai.n
+##' 
+##' @usage windDisp(SD2D, input, output="windDispSeeds", overwrite=FALSE)
+##' @name windDispGRASS
+##' @title Dispersal of seeds by wind
+##' @param SD2D Sedd Dispersal kernel 2D - \code{matrix} defining the 2D seed dispersal kernel 
+##' @param input name of GRASS raster layer specifying number of seeds to be dispersed - \code{character} 
+##' @param output name of GRASS raster layer generated, containing the dispersed seeds - \code{character} 
+##' @param zeroToNULL \code{boolean} if TRUE replace 0 with NA in the returned \code{matrix},
+##' otherwise all NA will be replaced with 0
+##' @param overwrite \code{boolean} if TRUE, \code{output} will be overwritten if it exists
+##' 
+##' @return \code{character} name of the output layer
+##' @author Rainer M Krug \email{Rainer@@krugs.de}
+##' @export 
+windDispGRASS <- function(
+    SD2D,
+    input,
+    output = "windDispSeeds",
+    zeroToNULL = TRUE,
+    overwrite = FALSE
+    ) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
-      stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+        stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     ##
     seeds <- readRAST6(
-                       c(
-                         input,
-                         "MASK"
-                         ),
-                       NODATA=-1
-                       )
+        c(
+            input,
+            "MASK"
+            ),
+        NODATA=-1
+        )
     ## seeds.m <- sgdfToMatrix(seeds, 1)
     seeds.m <- matrix(
-                    seeds[[1]],
-                    nrow=gridparameters(seeds)$cells.dim[1],
-                    ncol=gridparameters(seeds)$cells.dim[2])
+        seeds[[1]],
+        nrow=gridparameters(seeds)$cells.dim[1],
+        ncol=gridparameters(seeds)$cells.dim[2])
     ## mask.m <- sgdfToMatrix(seeds, 2)
     mask.m <- matrix(
-                     seeds[[2]],
-                     nrow=gridparameters(seeds)$cells.dim[1],
-                     ncol=gridparameters(seeds)$cells.dim[2])
-  
+        seeds[[2]],
+        nrow=gridparameters(seeds)$cells.dim[1],
+        ncol=gridparameters(seeds)$cells.dim[2])
+    
     dispSeeds.m <- windDisp(
-                            SD2D = SD2D,
-                            SEEDS = seeds.m,
-                            MASK = mask.m,
-                            zeroToNULL = zeroToNULL
-                            )
-  
+        SD2D = SD2D,
+        SEEDS = seeds.m,
+        MASK = mask.m,
+        zeroToNULL = zeroToNULL
+        )
+    
     seeds@data[[2]] <- as.vector(dispSeeds.m)
     
     mode(seeds[[2]]) <- "double"
     ## seeds@proj4string <- parameter$proj4string
     writeRAST6(
-               seeds,
-               output,
-               NODATA = -1,
-               zcol=2,
-               overwrite = overwrite
-               )
+        seeds,
+        output,
+        NODATA = -1,
+        zcol=2,
+        overwrite = overwrite
+        )
     return(output)
-  }
-  
+}
+
 #+end_src
 
 ** Local dispersal
 *** localDispGRASS
 #+begin_src R  :eval nil :tangle ./R/localDispGRASS.R :no-expand
-  ##' Locally disperse seeds from a seed layer using GRASS
-  ##' 
-  ##' @usage localDispGRASS(input, output, overwrite)
-  ##' @name localDispGRASS
-  ##' @title Dispersal of seeds locally, i.e. in surounding cells (half, evenly distributed)
-  ##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
-  ##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
-  ##' @param zeroToNULL \code{boolean} if TRUE convert zeros to NULL, otherwise NA to 0
-  ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
-  ##' @return \code{character} name of the output layer
-  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
-  ##' @export 
-  ##' @callGraphPrimitives
-  localDispGRASS <- function(input, output="localDispSeeds", zeroToNULL=TRUE, overwrite=FALSE) {
-      if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
-          stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
-      } 
-      r.mapcalc <- function(...)
-          {
-              comm <- paste( "r.mapcalc ", " \"", ..., "\" ", sep="" )
-              system( comm, intern=TRUE )
-          }
-      ## temporary layer name
-      tmp <- "TMP"
-      ## calculate 16th of to be dispersed seeds and set nulls to 0
-      r.mapcalc(
-          tmp,
-          " = ",
-          "double( ", input, " / 16 )"
-          ## 8/16 will remain in source cell,
-          ## 8/16 will be evenly distributed in neighbouring cells
-          )
-      execGRASS(
-          "r.null",
-          map  = tmp,
-          null = 0
-          )
-      ## Local Dispersal of all seeds in input
-      r.mapcalc(
-          output,
-          " = ",
-          "double( round(", 
-          tmp, "[-1,-1] + ",
-          tmp, "[-1, 0] + ",
-          tmp, "[-1, 1] + ",
-          tmp, "[ 0,-1] + ",
-          " 8 * ", tmp, "[ 0, 0] + ",
-          tmp, "[ 0, 1] + ",
-          tmp, "[ 1,-1] + ",
-          tmp, "[ 1, 0] + ",
-          tmp, "[ 1, 1]",
-          " ) )"
-          )
-      ## remove tmp
-      execGRASS(
-          cmd = "g.remove",
-          rast = tmp
-          )
-      ## if zeroToNULL
-      if (zeroToNULL) {
-          execGRASS(
-              "r.null",
-              map=output,
-              setnull="0",
-              ignore.stderr=!options("asmDebug")[[1]]
-              )
-      } else {
-          execGRASS(
-              "r.null",
-              map=output,
-              null=0,
-              ignore.stderr=!options("asmDebug")[[1]]
-              )    
-      }
-      ## return name of output layer
-      return(output)
-  } 
-  
+##' Disperses seeds locally, i.e. in neighbouring cells, from an input raster layer in GRASS
+##' and stores the dispersed seeds in an output layer in GRASS
+##'
+##' The seeds in the \code{input} layer are dispersed from each cell into the neighbouring layers following these
+##' likelihoods:
+##' 
+##' \code{+------+------+------+}
+##'
+##' \code{| 1/16 | 1/16 | 1/16 |}
+##' 
+##' \code{+------+------+------+}
+##' 
+##' \code{| 1/16 | 8/16 | 1/16 |}
+##' 
+##' \code{+------+------+------+}
+##' 
+##' \code{| 1/16 | 1/16 | 1/16 |}
+##' 
+##' \code{+------+------+------+}
+##' 
+##' @usage localDispGRASS(input, output, overwrite)
+##' @name localDispGRASS
+##' @title Dispersal of seeds in neighbouring cells
+##' @param input name of GRASS raster layer specifying number of seeds to be dispersed - \code{character}
+##' @param output name of GRASS raster layer generated, containing the dispersed seeds - \code{character} 
+##' @param zeroToNULL \code{boolean} if TRUE replace 0 with NA in the returned \code{matrix},
+##' otherwise all NA will be replaced with 0
+##' @param overwrite \code{boolean} if TRUE, \code{output} will be overwritten if it exists
+##' 
+##' @return \code{character} name of the output layer
+##' @author Rainer M Krug \email{Rainer@@krugs.de}
+##' @export 
+##' @callGraphPrimitives
+localDispGRASS <- function(
+    input,
+    output = "localDispSeeds",
+    zeroToNULL = TRUE,
+    overwrite = FALSE
+    ) {
+    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+        stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
+    } 
+    r.mapcalc <- function(...)
+        {
+            comm <- paste( "r.mapcalc ", " \"", ..., "\" ", sep="" )
+            system( comm, intern=TRUE )
+        }
+    ## temporary layer name
+    tmp <- "TMP"
+    ## calculate 16th of to be dispersed seeds and set nulls to 0
+    r.mapcalc(
+        tmp,
+        " = ",
+        "double( ", input, " / 16 )"
+        ## 8/16 will remain in source cell,
+        ## 8/16 will be evenly distributed in neighbouring cells
+        )
+    execGRASS(
+        "r.null",
+        map  = tmp,
+        null = 0
+        )
+    ## Local Dispersal of all seeds in input
+    r.mapcalc(
+        output,
+        " = ",
+        "double( round(", 
+        tmp, "[-1,-1] + ",
+        tmp, "[-1, 0] + ",
+        tmp, "[-1, 1] + ",
+        tmp, "[ 0,-1] + ",
+        " 8 * ", tmp, "[ 0, 0] + ",
+        tmp, "[ 0, 1] + ",
+        tmp, "[ 1,-1] + ",
+        tmp, "[ 1, 0] + ",
+        tmp, "[ 1, 1]",
+        " ) )"
+        )
+    ## remove tmp
+    execGRASS(
+        cmd = "g.remove",
+        rast = tmp
+        )
+    ## if zeroToNULL
+    if (zeroToNULL) {
+        execGRASS(
+            "r.null",
+            map=output,
+            setnull="0",
+            ignore.stderr=!options("asmDebug")[[1]]
+            )
+    } else {
+        execGRASS(
+            "r.null",
+            map=output,
+            null=0,
+            ignore.stderr=!options("asmDebug")[[1]]
+            )    
+    }
+    ## return name of output layer
+    return(output)
+} 
+
 #+end_src
 
 ** Bird dispersal
@@ -739,52 +812,57 @@ waterDispGRASS <- function(
 
 ** windDispCpp.cpp
 #+BEGIN_SRC c++ :tangle ./src/windDispCpp.cpp
-  #include "windDispCpp.h"
+#include "windDispCpp.h"
   
-  SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
-    using namespace Rcpp;
+SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
+  using namespace Rcpp;
   
-    // The input parameter  
-    int dx2 = as<int>(DX2); // by reference or value?
-    int dy2 = as<int>(DY2);
-    NumericVector sd2D (SD2D); // by reference!
-    IntegerMatrix seeds (SEEDS);
-    IntegerMatrix mask (MASK);
+  // The input parameter  
+  int dx2 = as<int>(DX2); // by reference or value?
+  int dy2 = as<int>(DY2);
+  NumericVector sd2D (SD2D); // by reference!
+  IntegerMatrix seeds (SEEDS);
+  IntegerMatrix mask (MASK);
   
-    // result vector
-    IntegerMatrix dispSeeds = clone<IntegerMatrix>(mask);
-  
-    // internal variables
-    IntegerVector s (sd2D.size());
-    RNGScope scope;                 // N.B. Needed when calling random number generators
-  
-    int res; 
-    int nc = dispSeeds.ncol();
-    int nr = dispSeeds.nrow();
-    
-    // BEGIN loop over seeds grid ("moving")
-    for( int y=0; y < nc; y++ ){
-      for( int x=0; x < nr; x++ ){
-        // BEGIN loop over sd2D ("window")
-        if ( dispSeeds(x, y) >= 0 ) {
-          int indS = 0;
-          for( int xS=x; xS <= x + dx2; xS++ )
-            for( int yS=y; yS <= y + dy2; yS++, indS++ )
-              s[indS]=seeds(xS, yS);
-          res = 0;
-          for( int i=0; i<s.size(); i++ ){
-            if (s[i]>0 && sd2D[i]>0) {
-              res += (int) ::Rf_rbinom((double)(s[i]), sd2D[i]);
-            }
+  // result vector
+  IntegerMatrix dispSeeds = clone<IntegerMatrix>(mask);
+
+  // internal variables
+  IntegerVector s (sd2D.size());
+  RNGScope scope;                 // N.B. Needed when calling random number generators
+
+  int res; 
+  int nc = dispSeeds.ncol();
+  int nr = dispSeeds.nrow();
+
+  // BEGIN loop over seeds grid ("moving")
+  for( int y=0; y < nc; y++ ){
+    for( int x=0; x < nr; x++ ){
+      // if dispBEGIN loop over sd2D ("window")
+      // #### begin if MASK <> NA
+      if ( dispSeeds(x, y) >= 0 ) { 
+        int indS = 0;
+        // loop ofer 2d2D and copy values into s
+        for( int xS=x; xS <= x + dx2; xS++ )
+          for( int yS=y; yS <= y + dy2; yS++, indS++ )
+            s[indS]=seeds(xS, yS);
+        res = 0;
+        // for each element in s draw binom and sum up
+        for( int i=0; i<s.size(); i++ ){
+          if (s[i]>0 && sd2D[i]>0) {
+            res += (int) ::Rf_rbinom((double)(s[i]), sd2D[i]);
           }
-          dispSeeds(x, y) = res;
         }
+        // copy resulting number of seds into dispSeeds(x,y)
+        dispSeeds(x, y) = res;
       }
+      // #### end if MASK <> NA
     }
-    // END loop over seeds
-  
-    return wrap( dispSeeds );
   }
+  // END loop over seeds
+  
+  return wrap( dispSeeds );
+}
 #+END_SRC
 
 * TODO Local tests
@@ -1059,3 +1137,28 @@ dir.create("./Rlib")
 |          |                                                  |
    
  [[info:emacs#Specifying%20File%20Variables][info:emacs#Specifying File Variables]]
+
+* README.org
+:PROPERTIES:
+:tangle: README.org
+:END:
+#+begin_src org
+,#+TITLE: seedDisp --- an R package to simulate seed dispersal
+,#+DATE: <2013-09-03 Tue>
+,#+AUTHOR: Rainer M. Krug
+,#+EMAIL: Rainer@krugs.de
+,#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline
+,#+OPTIONS: author:t c:nil creator:comment d:(not LOGBOOK) date:t e:t
+,#+OPTIONS: email:nil f:t inline:t num:t p:nil pri:nil stat:t tags:t
+,#+OPTIONS: tasks:t tex:t timestamp:t toc:t todo:t |:t
+,#+CREATOR: Emacs 24.3.1 (Org mode 8.0.7)
+,#+DESCRIPTION:
+,#+EXCLUDE_TAGS: noexport
+,#+KEYWORDS:
+,#+LANGUAGE: en
+,#+SELECT_TAGS: export
+
+The aim  of this package is to collect different seed dispersal routines usable in R to make finding and selecting seed dispersal function in R easier.
+
+
+#+end_src
