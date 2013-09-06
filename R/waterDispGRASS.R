@@ -1,31 +1,43 @@
 ## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*waterDispGRASS][waterDispGRASS:1]]
 ##' Water disperse seeds from a seed layer using GRASS
 ##'
+##' This function disperses seeds using water dispersal using the raster \code{flowdir} in GRASS agnps format
+##' and a raster containing the deposit rates of the seeds for each cell (values rangingfrom 0 to 1).
+##' 
 ##' The principle in this module is as follow:
-##' 1) calculate seeds which are deposited in cell and add these to the dispersedSeeds layer
-##' 2) disperse in each direction separately to avoid overlap
-##' 3) add up all dispersed seeds layers
-##' 4) repeat until all seeds are in the deposit layer
+##' \enumerate{
+##' \item create empty output layer
+##' \item copy input layer into seedsToBeDispersed
+##' \item \bold{repeat}
+##' \item calculate seeds which are deposited in each cell based on depRates and add these to the output layer
+##' \item subtract the deposited seeds from the seedsToBeDispersed layer
+##' \item disperse remaining seeds in each direction separately for each cell
+##' \item add up dispersed seeds and store in seedsToBeDispersed
+##' \item \bold{until seedsToBeDispersed is empty}
+##' \item \bold{end}
+##' }
 ##' 
 ##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
 ##' @name waterDispGRASS
 ##' @title Dispersal of seeds by water
 ##' 
-##' @param input \code{character} name of GRASS raster layer specifying number of seeds to be dispersed
-##' @param output \code{character} name of GRASS raster layer generated, containing the dispersed seeds
+##' @param input name of GRASS raster layer specifying number of seeds to be dispersed - \code{character} 
+##' @param output name of GRASS raster layer generated, containing the dispersed seeds - \code{character} 
 ##' @param flowdir \code{character} name of GRASS raster containing flow direction (in GRASS agnps format)
-##' @param depRates \code{character} name of GRASS raster layer cotaining the dsposit rates for each cell.
+##' @param depRates \code{character} name of GRASS raster layer cotaining the deposit rates for each cell.
+##' @param zeroToNULL \code{boolean} if TRUE replace 0 with NA in the returned \code{matrix},
 ##' @param overwrite \code{boolean} TRUE to overwrite existing output raster
+##' 
 ##' @return \code{character} name of the output layer
 ##' @author Rainer M Krug \email{Rainer@@krugs.de}
 ##' @export 
-##' @callGraphPrimitives
 waterDispGRASS <- function(
     input,
-    output,
+    output = "waterDispSeeds",
     flowdir,
-    depRates, 
-    overwrite  = FALSE
+    depRates,
+    zeroToNull = TRUE,
+    overwrite = FALSE
     ) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
@@ -180,6 +192,20 @@ waterDispGRASS <- function(
         rast = "_tmp.wdout.*",
         flags = "f"
         )
+    ## if zeroToNULL
+    if (zeroToNULL) {
+        execGRASS(
+            "r.null",
+            map=output,
+            setnull="0"
+            )
+    } else {
+        execGRASS(
+            "r.null",
+            map=output,
+            null=0
+            )    
+    }
     invisible(output)
 }
 ## waterDispGRASS:1 ends here

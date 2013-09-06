@@ -4,7 +4,7 @@
   ##' Package: \tab seedDisp\cr
   ##' Type: \tab Package\cr
   ##' Version: \tab 0.4.13\cr
-  ##' Date: \tab 2013-07-17_14-11\cr
+  ##' Date: \tab 2013-09-06_15-11\cr
   ##' License: \tab GPL (>= 2)\cr
   ##' LazyLoad: \tab yes\cr
   ##' }

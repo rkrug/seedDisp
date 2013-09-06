@@ -3,23 +3,23 @@
 \title{Dispersal of seeds by water}
 \usage{
   waterDispGRASS(input, output="waterDispSeeds",
-  slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
+    slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
 }
 \arguments{
-  \item{input}{\code{character} name of GRASS raster layer
-  specifying number of seeds to be dispersed}
+  \item{input}{name of GRASS raster layer specifying number
+  of seeds to be dispersed - \code{character}}
 
-  \item{output}{\code{character} name of GRASS raster layer
-  generated, containing the dispersed seeds}
-
-  \item{slope}{\code{character} name of GRASS raster layer
-  containing the slope in degrees}
+  \item{output}{name of GRASS raster layer generated,
+  containing the dispersed seeds - \code{character}}
 
   \item{flowdir}{\code{character} name of GRASS raster
   containing flow direction (in GRASS agnps format)}
 
-  \item{depRates}{\code{matrix} where the first column are
-  slope and the second column the responding deposit rates}
+  \item{depRates}{\code{character} name of GRASS raster
+  layer cotaining the deposit rates for each cell.}
+
+  \item{zeroToNULL}{\code{boolean} if TRUE replace 0 with
+  NA in the returned \code{matrix},}
 
   \item{overwrite}{\code{boolean} TRUE to overwrite
   existing output raster}
@@ -29,6 +29,23 @@
 }
 \description{
   Water disperse seeds from a seed layer using GRASS
+}
+\details{
+  This function disperses seeds using water dispersal using
+  the raster \code{flowdir} in GRASS agnps format and a
+  raster containing the deposit rates of the seeds for each
+  cell (values rangingfrom 0 to 1).
+
+  The principle in this module is as follow: \enumerate{
+  \item create empty output layer \item copy input layer
+  into seedsToBeDispersed \item \bold{repeat} \item
+  calculate seeds which are deposited in each cell based on
+  depRates and add these to the output layer \item subtract
+  the deposited seeds from the seedsToBeDispersed layer
+  \item disperse remaining seeds in each direction
+  separately for each cell \item add up dispersed seeds and
+  store in seedsToBeDispersed \item \bold{until
+  seedsToBeDispersed is empty} \item \bold{end} }
 }
 \author{
   Rainer M Krug \email{Rainer@krugs.de}

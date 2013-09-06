@@ -1,0 +1,24 @@
+* installing *source* package 'seedDisp' ...
+** libs
+c++ -I/usr/local/Cellar/r/3.0.1/R.framework/Resources/include -DNDEBUG  -I/usr/local/include -I"/Users/rainerkrug/Library/R/3.0/library/Rcpp/include"   -fPIC  -g -O2  -c windDispCpp.cpp -o windDispCpp.o
+windDispCpp.cpp:35:23: error: use of undeclared identifier 'xs'
+            if ( MASK(xs, ys) >= 0){ 
+                      ^
+windDispCpp.cpp:38:25: error: expected ';' after expression
+              s[indS]=-1
+                        ^
+                        ;
+2 errors generated.
+make: *** [windDispCpp.o] Error 1
+c++ -I/usr/local/Cellar/r/3.0.1/R.framework/Resources/include -DNDEBUG  -I/usr/local/include -I"/Users/rainerkrug/Library/R/3.0/library/Rcpp/include"   -fPIC  -g -O2  -c windDispCpp.cpp -o windDispCpp.o
+windDispCpp.cpp:35:23: error: use of undeclared identifier 'xs'
+            if ( MASK(xs, ys) >= 0){ 
+                      ^
+windDispCpp.cpp:38:25: error: expected ';' after expression
+              s[indS]=-1
+                        ^
+                        ;
+2 errors generated.
+make: *** [windDispCpp.o] Error 1
+ERROR: compilation failed for package 'seedDisp'
+* removing '/Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/..Rcheck/seedDisp'

@@ -1,2 +1,6 @@
-  useDynLib(seedDisp)
-  exportPattern("^[[:alpha:]]+")
+export(birdDispGRASS)
+export(localDispGRASS)
+export(waterDispGRASS)
+export(windDisp)
+export(windDispGRASS)
+useDynLib(seedDisp)
