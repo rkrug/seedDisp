@@ -2,7 +2,7 @@
 \alias{windDisp}
 \title{Dispersal of seeds by wind}
 \usage{
-  windDisp(SD2D, SEEDS, MASK)
+  windDisp(SD2D, SEEDS, MASK, zeroToNULL)
 }
 \arguments{
   \item{SD2D}{Sedd Dispersal kernel 2D - \code{matrix}

@@ -2,8 +2,8 @@
 \alias{windDispGRASS}
 \title{Dispersal of seeds by wind}
 \usage{
-  windDisp(SD2D, input, output="windDispSeeds",
-    overwrite=FALSE)
+  windDispGRASS(SD2D, input, output="windDispSeeds",
+    zeroToNULL = TRUE, overwrite=FALSE)
 }
 \arguments{
   \item{SD2D}{Sedd Dispersal kernel 2D - \code{matrix}

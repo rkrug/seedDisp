@@ -8,7 +8,7 @@
 ##'
 ##' The MASK in GRASS is respected.
 ##' 
-##' @usage birdDispGRASS(input, output, zeroToNull, overwrite)
+##' @usage birdDispGRASS(input, output, zeroToNULL, overwrite)
 ##' @name birdDispGRASS
 ##' @title Dispersal of seeds by birds
 ##' 
@@ -40,13 +40,18 @@ birdDispGRASS <- function(
     oldWarn <- options()$warn
     options(warn=-1)
     seeds[[3]] <- 0
-    seeds[[3]][!is.na(seeds[[MASK]])] <- rbinom(                                     # Bird dispersal
-                                                cells <- sum(!is.na(seeds[[MASK]])), # into all cells which are not NULL in the region
-                                                sum(seeds[[input]], na.rm=TRUE),     # seeds to disperse
-                                                1/cells                              # probability is the same for each cell
-                                                )
+    seeds[[3]][!is.na(seeds[[MASK]])] <- rmultinom(
+        n = 1,
+        size = sum(seeds[[input]], na.rm=TRUE),
+        prob = rep(1, length.out=sum(!is.na(seeds[[MASK]])))
+        )
+    ## seeds[[3]][!is.na(seeds[[MASK]])] <- rbinom(                                     # Bird dispersal
+    ##                                             cells <- sum(!is.na(seeds[[MASK]])), # into all cells which are not NULL in the region
+    ##                                             sum(seeds[[input]], na.rm=TRUE),     # seeds to disperse
+    ##                                             1/cells                              # probability is the same for each cell
+    ## )
     options(warn=oldWarn)
-    
+
     if (zeroToNULL) {
         seeds[[3]][seeds[[3]]==0] <- NA
     } else {

@@ -2,7 +2,8 @@
 \alias{localDispGRASS}
 \title{Dispersal of seeds in neighbouring cells}
 \usage{
-  localDispGRASS(input, output, overwrite)
+  localDispGRASS(input, output = "localDispSeeds",
+    zeroToNULL = TRUE, overwrite = FALSE)
 }
 \arguments{
   \item{input}{name of GRASS raster layer specifying number
@@ -31,10 +32,10 @@
   each cell into the neighbouring layers following these
   likelihoods:
 
-  \code{\cr +------+------+------+ \cr | 1/16 | 1/16 | 1/16
-  | \cr +------+------+------+ \cr | 1/16 | 8/16 | 1/16 |
-  \cr +------+------+------+ \cr | 1/16 | 1/16 | 1/16 | \cr
-  +------+------+------+ \cr }
+  ' \preformatted{ ' +------+------+------+ ' | 1/16 | 1/16
+  | 1/16 | ' +------+------+------+ ' | 1/16 | 8/16 | 1/16
+  | ' +------+------+------+ ' | 1/16 | 1/16 | 1/16 | '
+  +------+------+------+ ' }
 
   The resulting seed layer is saved and, if it exists and
   \code{overwrite==TRUE}, overwritten.

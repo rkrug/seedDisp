@@ -7,7 +7,7 @@
 ##'
 ##' The MASK in GRASS is respected.
 ##' 
-##' @usage windDisp(SD2D, input, output="windDispSeeds", overwrite=FALSE)
+##' @usage windDispGRASS(SD2D, input, output="windDispSeeds", zeroToNULL = TRUE, overwrite=FALSE)
 ##' @name windDispGRASS
 ##' @title Dispersal of seeds by wind
 ##' @param SD2D Sedd Dispersal kernel 2D - \code{matrix} defining the 2D seed dispersal kernel 

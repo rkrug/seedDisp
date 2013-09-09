@@ -2,7 +2,7 @@
 \alias{birdDispGRASS}
 \title{Dispersal of seeds by birds}
 \usage{
-  birdDispGRASS(input, output, zeroToNull, overwrite)
+  birdDispGRASS(input, output, zeroToNULL, overwrite)
 }
 \arguments{
   \item{input}{name of GRASS raster layer specifying number

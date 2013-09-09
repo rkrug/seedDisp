@@ -2,8 +2,8 @@
 \alias{waterDispGRASS}
 \title{Dispersal of seeds by water}
 \usage{
-  waterDispGRASS(input, output="waterDispSeeds",
-    slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
+  waterDispGRASS(input, output="waterDispSeeds", flowdir,
+    depRates, zeroToNULL = TRUE, overwrite = FALSE)
 }
 \arguments{
   \item{input}{name of GRASS raster layer specifying number

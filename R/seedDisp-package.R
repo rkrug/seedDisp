@@ -1,9 +1,9 @@
-## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*Package%20description%20(seedDisp-package.R)][Package\ description\ \(seedDisp-package\.R\):1]]
 ##' Disperses seeds by using different routines
 ##'
-##' THis package is a collection of different seed sispersal routines. 
+##' This package is a collection of different seed sispersal routines. 
+##'
 ##' 
-##' \tabular{ll}{
+##' ##' \tabular{ll}{
 ##' Package: \tab seedDisp\cr
 ##' Type: \tab Package\cr
 ##' Version: \tab 0.4.13\cr
@@ -12,10 +12,10 @@
 ##' LazyLoad: \tab yes\cr
 ##' }
 ##'
+##' @name seedDisp-package
 ##' @docType package
 ##' @author Rainer M Krug \email{Rainer@@krugs.de}
 NULL
-## Package\ description\ \(seedDisp-package\.R\):1 ends here
 
 ## Local Variables:
 ## org-babel-tangled-file: t

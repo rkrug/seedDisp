@@ -178,24 +178,6 @@ git status  :
 
 
 
-* Package description
-#+begin_src R :eval nil :tangle ./seedDisp-package.R :shebang :padline no :no-expand :comments no
-  ##' Disperses seeds by using different routines
-  ##' 
-  ##' \tabular{ll}{
-  ##' Package: \tab seedDisp\cr
-  ##' Type: \tab Package\cr
-  ##' Version: \tab MAJORVERSION.MINORVERSION.PATCHVERSION\cr
-  ##' Date: \tab TODAYSDATE\cr
-  ##' License: \tab GPL (>= 2)\cr
-  ##' LazyLoad: \tab yes\cr
-  ##' }
-  ##'
-  ##' @docType package
-  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
-  NULL
-#+end_src
-
 * Package Files
 ** DESCRIPTION
 :PROPERTIES:
@@ -210,8 +192,8 @@ Type: Package
 Title: Dispersal of seed routines
 Version: MAJORVERSION.MINORVERSION-PATCHVERSION
 Date: TODAYSDATE
-Author: Rainer M. Krug
-Maintainer: Rainer M Krug <Rainer@krugs.de>
+Author: Rainer M. Krug <Rainer@krugs.de>
+Maintainer: Rainer M. Krug <Rainer@krugs.de>
 Description: Collection of different seed dispersal routines.
 License: GPL-3
 LazyLoad: yes
@@ -233,6 +215,33 @@ LinkingTo: Rcpp
 
 #+results:
 
+** Package description (seedDisp-package.R)
+:PROPERTIES:
+:tangle:   ./R/seedDisp-package.R
+:eval: nil
+:no-expand: TRUE
+:comments: no
+:END:
+#+begin_src R 
+##' Disperses seeds by using different routines
+##'
+##' This package is a collection of different seed sispersal routines. 
+##'
+##' 
+##' ##' \tabular{ll}{
+##' Package: \tab seedDisp\cr
+##' Type: \tab Package\cr
+##' Version: \tab 0.4.13\cr
+##' Date: \tab 2013-09-09_14-51\cr
+##' License: \tab GPL (>= 2)\cr
+##' LazyLoad: \tab yes\cr
+##' }
+##'
+##' @name seedDisp-package
+##' @docType package
+##' @author Rainer M Krug \email{Rainer@@krugs.de}
+NULL
+#+end_src
 
 * R directory (./R)
 ** Wind dispersal
@@ -270,7 +279,7 @@ LinkingTo: Rcpp
 ##' in the function before calling the C function.
 ##' 
 ##' 
-##' @usage windDisp(SD2D, SEEDS, MASK)
+##' @usage windDisp(SD2D, SEEDS, MASK, zeroToNULL)
 ##' @name windDisp
 ##' @title Dispersal of seeds by wind
 ##' @param SD2D Sedd Dispersal kernel 2D - \code{matrix} defining the 2D seed dispersal kernel 
@@ -328,7 +337,7 @@ windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
 ##'
 ##' The MASK in GRASS is respected.
 ##' 
-##' @usage windDisp(SD2D, input, output="windDispSeeds", overwrite=FALSE)
+##' @usage windDispGRASS(SD2D, input, output="windDispSeeds", zeroToNULL = TRUE, overwrite=FALSE)
 ##' @name windDispGRASS
 ##' @title Dispersal of seeds by wind
 ##' @param SD2D Sedd Dispersal kernel 2D - \code{matrix} defining the 2D seed dispersal kernel 
@@ -401,21 +410,21 @@ windDispGRASS <- function(
 ##' The seeds in the \code{input} layer are dispersed from each cell into the neighbouring layers following these
 ##' likelihoods:
 ##' 
-##' \code{\cr
-##' +------+------+------+ \cr
-##' | 1/16 | 1/16 | 1/16 | \cr
-##' +------+------+------+ \cr
-##' | 1/16 | 8/16 | 1/16 | \cr
-##' +------+------+------+ \cr
-##' | 1/16 | 1/16 | 1/16 | \cr
-##' +------+------+------+ \cr
-##' }
+#'' \preformatted{
+#'' +------+------+------+
+#'' | 1/16 | 1/16 | 1/16 |
+#'' +------+------+------+
+#'' | 1/16 | 8/16 | 1/16 |
+#'' +------+------+------+
+#'' | 1/16 | 1/16 | 1/16 |
+#'' +------+------+------+
+#'' }
 ##'
 ##' The resulting seed layer is saved and, if it exists and \code{overwrite==TRUE}, overwritten.
 ##'
 ##' The MASK in GRASS is respected.
 ##' 
-##' @usage localDispGRASS(input, output, overwrite)
+##' @usage localDispGRASS(input, output = "localDispSeeds", zeroToNULL = TRUE, overwrite = FALSE)
 ##' @name localDispGRASS
 ##' @title Dispersal of seeds in neighbouring cells
 ##' @param input name of GRASS raster layer specifying number of seeds to be dispersed - \code{character}
@@ -509,7 +518,7 @@ localDispGRASS <- function(
 ##'
 ##' The MASK in GRASS is respected.
 ##' 
-##' @usage birdDispGRASS(input, output, zeroToNull, overwrite)
+##' @usage birdDispGRASS(input, output, zeroToNULL, overwrite)
 ##' @name birdDispGRASS
 ##' @title Dispersal of seeds by birds
 ##' 
@@ -541,13 +550,18 @@ birdDispGRASS <- function(
     oldWarn <- options()$warn
     options(warn=-1)
     seeds[[3]] <- 0
-    seeds[[3]][!is.na(seeds[[MASK]])] <- rbinom(                                     # Bird dispersal
-                                                cells <- sum(!is.na(seeds[[MASK]])), # into all cells which are not NULL in the region
-                                                sum(seeds[[input]], na.rm=TRUE),     # seeds to disperse
-                                                1/cells                              # probability is the same for each cell
-                                                )
+    seeds[[3]][!is.na(seeds[[MASK]])] <- rmultinom(
+        n = 1,
+        size = sum(seeds[[input]], na.rm=TRUE),
+        prob = rep(1, length.out=sum(!is.na(seeds[[MASK]])))
+        )
+    ## seeds[[3]][!is.na(seeds[[MASK]])] <- rbinom(                                     # Bird dispersal
+    ##                                             cells <- sum(!is.na(seeds[[MASK]])), # into all cells which are not NULL in the region
+    ##                                             sum(seeds[[input]], na.rm=TRUE),     # seeds to disperse
+    ##                                             1/cells                              # probability is the same for each cell
+    ## )
     options(warn=oldWarn)
-    
+
     if (zeroToNULL) {
         seeds[[3]][seeds[[3]]==0] <- NA
     } else {
@@ -587,7 +601,7 @@ birdDispGRASS <- function(
 ##' \item \bold{end}
 ##' }
 ##' 
-##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
+##' @usage waterDispGRASS(input, output="waterDispSeeds", flowdir, depRates, zeroToNULL = TRUE, overwrite = FALSE)
 ##' @name waterDispGRASS
 ##' @title Dispersal of seeds by water
 ##' 
@@ -606,7 +620,7 @@ waterDispGRASS <- function(
     output = "waterDispSeeds",
     flowdir,
     depRates,
-    zeroToNull = TRUE,
+    zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
@@ -917,243 +931,6 @@ SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
 * TODO Vignette
 Write vignette
 * package management                                               :noexport:
-** check package
-#+begin_src sh :results output
-  CWD=`pwd`
-  R CMD check . | sed 's/^*/ */'
-#+end_src
-
-#+results:
-#+begin_example
- * using log directory '/Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/..Rcheck'
- * using R version 3.0.1 (2013-05-16)
- * using platform: x86_64-apple-darwin12.4.0 (64-bit)
- * using session charset: ASCII
- * checking for file './DESCRIPTION' ... OK
- * checking extension type ... Package
- * this is package 'seedDisp' version '0.4-13'
- * checking package namespace information ... OK
- * checking package dependencies ... OK
- * checking if this is a source package ... WARNING
-Subdirectory 'seedDisp/src' contains apparent object files/libraries
-  seedDisp.so windDispCpp.o
-Object files/libraries should not be included in a source package.
- * checking if there is a namespace ... OK
- * checking for executable files ... WARNING
-Found the following executable files:
-  .git/objects/00/64e54bb4e4ccc0590f7842212c6bd9be10cd6d
-  .git/objects/00/efb18ad59c6a2a79d18b7ef7602d8a51f1b5d4
-  .git/objects/02/73dcefe4c64204bcac41a93b385d30713bf819
-  .git/objects/04/ccdad6b13e450fa7091a462321c91b4dc9a54e
-  .git/objects/05/b486d610dd476e4c415fb80f34c43da9679477
-  .git/objects/05/c156898c6b48fac8b9e47bc41570b306bd9266
-  .git/objects/05/d99118830a7d481e0084a190791f956537968d
-  .git/objects/09/aacf2a69bb167b0205a457720e0a82fba4544b
-  .git/objects/0a/2982c7a088c84704dcf166dde7bd28e12ed7ef
-  .git/objects/0a/e47c50d18847ceeddfe0dcb499dcfea528ee13
-  .git/objects/0b/5d8aa750564802141836b18ccaecaa07274e20
-  .git/objects/0c/0a05b3bf93a9c6a38b68ea212ea0f42e713448
-  .git/objects/0c/1f8ea7d5d97209bb1d68900e511bbace47a7f3
-  .git/objects/0c/e275b5d63fd5383cbd220d8ab7778e7252cc5c
-  .git/objects/0d/3ead50e0abbfdf7d26072f6f3f96abe1f55828
-  .git/objects/0f/ad19656c8bd967e581c683a13ae2f08273ea94
-  .git/objects/10/be0c12f36ddd56f6edcb8fe6e8c861b65668cf
-  .git/objects/13/2cd10d6113481fadc0622aa8753f93934a1676
-  .git/objects/13/3db773b71990d2718d1080ba7a85ee2b368aa1
-  .git/objects/16/f3bb09983c97ad869b0f66ca6cba0f88e1afce
-  .git/objects/17/507f47b5b92dd0dcdb2a5e82acffe108d4be9d
-  .git/objects/1a/381bc2cb98f679d15af23283b35de7d5c51096
-  .git/objects/1b/40f1c6345c623bdbcb18fd39d2f00335589081
-  .git/objects/1b/4e7381409e7f78115d07ddfbbbcbe3131aefb3
-  .git/objects/1b/7ad76ceec522afb42bc8153aa9f079f08c42c7
-  .git/objects/1f/b9bf5aeef187304c51204917ec395ec731aac3
-  .git/objects/1f/f8c93b84c06730792fc8f7faee7e9bc6dc30db
-  .git/objects/21/16f8e445e20d2229cad8a922123d1ed27dde81
-  .git/objects/22/34ed9ee3fbb97bb8c66e967409787e18033800
-  .git/objects/23/bc15379231b4f4b7d8de6011565138296779c9
-  .git/objects/26/d31445a4d25b6f8e8ddb530a240bff491b7b6f
-  .git/objects/27/26cff619179de632db0b95bb351f693d983266
-  .git/objects/27/5ba042cc14050c363459da241efb0377bd40ca
-  .git/objects/27/bdc591d325aa29a5f37073321d4f87564f2842
-  .git/objects/27/bee04742a1b5ff9ad0cbf069e519722d9f0c7d
-  .git/objects/29/3f9c13a685626464ce17e3a44e14a7531b18ae
-  .git/objects/2a/4113303486534ca266fe6fdeee224a36f8775e
-  .git/objects/2b/d211fddbe719c19da09c5e3c44574d371c03ee
-  .git/objects/2d/b8569e64fdf899cc7d62946f127407e0151238
-  .git/objects/30/fb5472a846f1ef04276b426934c1b38fcee0cf
-  .git/objects/31/08875338b20c10dd4fa09a6937f41115c5a8ec
-  .git/objects/31/13a1dc5d81d559ea7a5069b3a69fc6e0d157cd
-  .git/objects/31/bdbb1f440e269dbdacfbd485facf49e435759c
-  .git/objects/35/fd13e12659e7a74711a1fdc7e557a34bd46f75
-  .git/objects/36/7eb63490acc1f5d8042f172e44927ecb2d0052
-  .git/objects/38/5a3f339873e29e92d5c24e90c7142e14118e6d
-  .git/objects/3b/6785a30e99eca12010f841d625ab9214dec2b3
-  .git/objects/3c/e9eb3adc41b14289517881bfc38711e29465a7
-  .git/objects/3d/c1ba5df033328d384563f85a0009f61d08b799
-  .git/objects/3d/e9ca973fc5cf35ecc192768b41391c125c8c6b
-  .git/objects/3e/332a28394847a1db7e1f75ac59bbdd289471b9
-  .git/objects/3e/a68dfaafd1de464788845d367097693a32de57
-  .git/objects/41/18990a9776a72108ab036c39ac03fd056e9135
-  .git/objects/41/fc35923a1dcb2c36a4c7bc31ad0f8368cf4bb5
-  .git/objects/42/b9f0dd683c2d31234a54779b869784c54f373a
-  .git/objects/43/9aecd0c56c7e5c1edce21d6d4efbd63f10c2a6
-  .git/objects/44/66e16c895ab6e4d2b9d293e9451c4b9401174a
-  .git/objects/45/35e561c57e1ccf4471a31caaa57e9e20e7ae55
-  .git/objects/47/14ecfe48f06c3a8a7408d8460bc33872db4eae
-  .git/objects/47/4cb96e20aa5dce7ae070371d26d6987fa699a6
-  .git/objects/47/8f71579ef1e2d05828a657bfb264441afa8e8d
-  .git/objects/48/8c7f62bc0e1974cde252ae551b9927bfb0791d
-  .git/objects/4b/57e439bc975d104e4b0a52dab708212da17829
-  .git/objects/4b/874b68a6e5159eab8e2c1206c809958fa554eb
-  .git/objects/4b/f154327e96bb1e6bc2148caab885343f95f696
-  .git/objects/4c/7e2bba437618f8394c0629b8258da7151bc3f8
-  .git/objects/4c/d0f06f5acb44ba0029dcda6c0ee84516b47a5f
-  .git/objects/4d/8447b7f0b81f27750800ac1f6cf77538eb96bb
-  .git/objects/4e/d3f34a151dbc5be2720deaf74b8b40170882d8
-  .git/objects/4e/f5753b671898fd3500fd2ffd67ebdde4cf658e
-  .git/objects/50/109b8e789e25b3e78a2b1e363f628476eec5e6
-  .git/objects/51/17eaaaddff0527dbf8849bde97c1fb7fcf1647
-  .git/objects/52/a06431fe0b663ced3809dc31e1ee1b85f4e519
-  .git/objects/59/d11e8ea3cdea6c97a66fe5f429b8fdc4968d5b
-  .git/objects/5a/b2194e3720eba6f14d67f20e1a775981027db8
-  .git/objects/5c/26c2eee722f723cabb99d11a73c39de5e38cf0
-  .git/objects/5d/8a8f3fee97e57e2d9bf6fb56a5ca2d1eefffff
-  .git/objects/5e/0c787b5efb3f89fc1e0acc3a0374389ffa4eb1
-  .git/objects/5e/cab9b26e625ce66219aaaa7ada7b59225c88c5
-  .git/objects/63/ea8f24e2cc93d2b24f705d9b73991be60b98a4
-  .git/objects/64/615f7661e81cf4018e1d2270ca3001a7730a16
-  .git/objects/65/73ae8192171ca9d5c9c843da8618d9aab3635f
-  .git/objects/66/14b539877041f9f6e8d67ebcdda5abb4253817
-  .git/objects/66/a17f0227465d55ee61faf9e8e52b8bea2ad6ec
-  .git/objects/6c/01a31bc5e2d696d60170ff27eba9d06d383e4b
-  .git/objects/6c/ba183650dfdb3ffed715116dd012fdd91d478b
-  .git/objects/6d/f2c5e95e9e003c44f88e2064c40d33ad43b522
-  .git/objects/6e/8c9bdd76eaed8ce0d7e89b5008d9cfa2adfdbd
-  .git/objects/6e/dc239a5c113fcf805c13208227353bbebc9d9c
-  .git/objects/73/97c25f3f210625ae325f2138ee6c438338717a
-  .git/objects/74/eeaf356f44536275447e47c472ff1c2d96b906
-  .git/objects/77/5df31daac36f880f2cc4dbfbe25d21c1cc2862
-  .git/objects/78/484be25f573f8dd62f22922ad6631f133737da
-  .git/objects/79/e64337a596b16a960c087602b2fa2aaac3dedd
-  .git/objects/7b/391250b50407a38bc7d3f6e860c52b11a4cd96
-  .git/objects/7b/66c14126046e553f6dc2ffe5129a059283dfea
-  .git/objects/7b/8a4dbc532585148168ba0879970e3f84705107
-  .git/objects/7c/cd23ed2ae5bedffd9dffdb281f3cb8ab575b96
-  .git/objects/81/8fa3c8915131ef6a461f92e2ca0f92794fa376
-  .git/objects/83/6ce2792c46d7df7ff1d9a328508c9a275d21dd
-  .git/objects/83/c59d401051fc0c21017da0f2a5f05f216e530c
-  .git/objects/84/becd681ff73491273f6a6db02f6291b292d657
-  .git/objects/86/3d451540256c1290729f4862a0b63ad77b4c21
-  .git/objects/8a/b23927a6d95d1128b39273ef26dd57823409e3
-  .git/objects/8a/d97018fea50be5a63848ab08bb63907b3074ac
-  .git/objects/8b/0db1cd50e19924479739997b48042d9389acef
-  .git/objects/8b/1171c1d40e1c780d84b1930cb44b2df1a500f1
-  .git/objects/8b/98289207a3833dfacee6ec8fb3ce5cc39c37ef
-  .git/objects/8b/ef343a986710a9be1645295bd4ff7499f5fbc7
-  .git/objects/8c/b4b80d6d9accb405eb1a276d67bea9e1bf779e
-  .git/objects/8e/2735e20b3f49b080907dd59af713770fdea7d0
-  .git/objects/8e/965ae5ed17471b044191d5df6ad7990d644799
-  .git/objects/8f/51dfa8acf0a045df41fdb8f2293e2d3aefa02d
-  .git/objects/90/23f22380467f6fcaca4ca9e22ea1f6c1bf7da6
-  .git/objects/90/6d085c35b4b835082e4583c4134c5ddf7f1555
-  .git/objects/91/dbedc936440547314edccc091602a800a18894
-  .git/objects/92/ce2d03a2b25ab8f1a93ca6b1cfc850552cb74f
-  .git/objects/92/e926bd98b05f3a1f2dd11368afd5c3fa06afa9
-  .git/objects/94/a81520cf5641caad0133c044683fea05c68f62
-  .git/objects/95/0193fdbc2030aeae2630ced21f0ea550b104a1
-  .git/objects/95/1ea8f582ad9d22bf7d1465014fecc9533707fd
-  .git/objects/95/26c68ad299a65f78efedf338b084fbc45329bd
-  .git/objects/97/761241f44b9c3ad375d1cb5b93f5a8c2bedb07
-  .git/objects/98/5b76d13b99e14980c03e8731a0928af9afed59
-  .git/objects/98/d311d946fd09df202f29f729e1c9a7033e97f2
-  .git/objects/9d/73c74fbc33bd30ad2d07dd09868c5e9603db0e
-  .git/objects/a1/1f519e46f6a639adedfb44a072532b056609ba
-  .git/objects/a2/b4fc07ee3f95011fc607ac46e628a28bc5b9b6
-  .git/objects/a2/fbb05fcef8e47fb7a19e81c168835b0a49d130
-  .git/objects/a4/c5416d033e604d2f1c9207bc1c9ff61a63f6c0
-  .git/objects/a6/331ec0aeedc7e06bd1fa7b19016c744174e004
-  .git/objects/aa/46b7e3f73859f9f7e4aae5b9d93d750cc04bf8
-  .git/objects/aa/7da2efb697162be0b2ece07625023266b90441
-  .git/objects/ab/e540e4a35b355bd9213b3d53972238c96e97b2
-  .git/objects/ad/c5372d205e320137133d8b28acde047e7d675b
-  .git/objects/af/c18b60eac6b92dbffacef2726657f030dd9b3d
-  .git/objects/b0/ee1339ede2cd5d59e10acac8674d7e79b29b39
-  .git/objects/b2/3e4b1b6e7bbe65b157b9abeea8ec1c468b5182
-  .git/objects/b3/6271f92b24a9a9fcb1eeba0b0c99d2ffcd8454
-  .git/objects/b3/99d52b8a233c0c042c12f31a08f46b4a87aeee
-  .git/objects/b4/9b12234d327abc929e71f4116560ee3d0c4115
-  .git/objects/b5/0eeb6a67dbaa866a23da43c0b4ef187fb785c5
-  .git/objects/b7/83a341c28ee44c46baf6811ffd25261ba8c9ec
-  .git/objects/b7/b5f79d5bbcec83fbfbb4acf9f4e82084c67bf0
-  .git/objects/b9/285293f6df231341322edc9335ba45bf3737bd
-  .git/objects/ba/8e11fc7fce73089e6e23b0daf6f9c21d8b6d73
-  .git/objects/bc/2afaf09c2d4bdd9d91f858fe83c37b0124b022
-  .git/objects/c0/c27f26265aadf6cae1beaffcca45dc7c1ff4ac
-  .git/objects/c1/56a8140cb02f78f633f2ac964034f3a1f18077
-  .git/objects/c3/585da79ffa2a0c0167af4814e5f53598203dc6
-  .git/objects/c6/85379b6b427da41967d211e8bca55b9f9f93e5
-  .git/objects/c7/9a8216942aeffc3ad77942e6f7da406afc323b
-  .git/objects/c7/b505a3d0e65bba61e9efdb60971ea69f8093af
-  .git/objects/c8/db4ee2c1750a6f22b8bde263edde83f55519c2
-  .git/objects/c8/f1a4af255a603ae2ad12a6a730b44aebfc5ffa
-  .git/objects/cb/ebc2b9737a9ae3ef4776272746894d622e07f3
-  .git/objects/d2/b99f34f4491ff8e98e538603ffec5e25ea5812
-  .git/objects/d2/efb7a0305d49ad885ea80d5abae0c8c63b4ee3
-  .git/objects/d4/5ff1035a5735efccd537a8b1516bca420d50a1
-  .git/objects/d5/d19028eb008f0c89b9483004cbf8599b23f46a
-  .git/objects/dc/7dbf68fc6c42c05c0512492e15fcee0336da55
-  .git/objects/dd/85db0354361b9d52970cdfc6b075c741d91913
-  .git/objects/dd/bde521777641416ca68605fb1b37325a26ce84
-  .git/objects/dd/e9330052aa6bd6eb5d1757afd7f072d4f0a05c
-  .git/objects/de/932ea9d4e767746abf7f7590ba58b2883f3f5a
-  .git/objects/de/b11122afdcb723876be8faa3bb0fc69b69e442
-  .git/objects/de/f8d8e55dea80a6597507addec6c52acdc923b0
-  .git/objects/e1/31308a12cde2d2a52722223682b56cab77c5bf
-  .git/objects/e4/92eb30de3cd5b50bdf66c34da69f256a7e282c
-  .git/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391
-  .git/objects/e6/afc430b2a3d56628d805f9696ce4bd4688e37f
-  .git/objects/e7/2ef278592ef625acd9b51951b4291fae1bfbe8
-  .git/objects/e7/59eb89c59ad10538fd6166f467540eb4e4d94e
-  .git/objects/e9/e827dcab6d7201654757e2c31a168e63e54084
-  .git/objects/eb/dab962f97c67fd0fa37198b501cdd6eb5a5d15
-  .git/objects/ec/beddc737e1ddaaa20003438babfc3fb6dd1460
-  .git/objects/ed/af3c7966ca4d1719753ac1c3c70e7540da7b20
-  .git/objects/ee/8ad3873134c845f8e1b16bae7ddb9fd7cb4a39
-  .git/objects/ee/baabf331400d851298dd78755b4f738b03e970
-  .git/objects/ee/e1ba103130f026bb341ce239178ff376b1ded6
-  .git/objects/f0/3df4363282aa404515f9146ebbb2c74dcbcc3c
-  .git/objects/f2/e6cbaa359956d96332e23bcf311c796f8a6ccb
-  .git/objects/f3/48cb2dc464811ff9225fcb18f15eb7b6897bda
-  .git/objects/f4/5ea7697a4bbf78ffd7e8e84e3fb350a06530fb
-  .git/objects/f5/11780337477194ddf7f7cd78d658c3cdc00734
-  .git/objects/f6/d9b6fcedae5d27cb56784068f7c02e360f7be9
-  .git/objects/f7/d8b412c2ece00190fad801c19c6e491559dfdf
-  .git/objects/f8/00904f5df6ecf8d7852bb17744719ba3be3011
-  .git/objects/f8/41665115693e50d752d919184bd49acd66c57f
-  .git/objects/fa/b1d2a0d4fbfb13eae817fbc2d193a7bf4a1ca2
-  .git/objects/fd/f78f989d0ece4679c75f31054c09596e8d9d73
-  .git/objects/fe/68be7accb027c118dc5f1e4aff408b5c14587e
-  .git/objects/ff/3baa4e481978f5a9916348612d8539451e50df
-Source packages should not contain undeclared executable files.
-See section 'Package structure' in the 'Writing R Extensions' manual.
- * checking for hidden files and directories ... NOTE
-Found the following hidden files and directories:
-  .#seedDisp.org
-  .Rhistory
-  .git/svn/.metadata
-  .git/svn/refs/remotes/git-svn/.rev_map.edb9625f-4e0d-4859-8d74-9fd3b1da38cb
-  .gitignore
-  ..Rcheck
-  .git
-These were most likely included in error. See section 'Package
-structure' in the 'Writing R Extensions' manual.
- * checking for portable file names ... OK
- * checking for sufficient/correct file permissions ... OK
- * checking whether package 'seedDisp' can be installed ... ERROR
-Installation failed.
-See '/Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/..Rcheck/00install.out' for details.
-#+end_example
-
 
 
 ** INSTALL package
@@ -1174,7 +951,82 @@ See '/Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/..Rcheck/00install
 #+end_src
 
 #+results:
+: * checking for file './DESCRIPTION' ... OK
+: * preparing 'seedDisp':
+: * checking DESCRIPTION meta-information ... OK
+: * cleaning src
+: * checking for LF line-endings in source and make files
+: * checking for empty or unneeded directories
+: Removed empty directory 'seedDisp/inst'
+: * building 'seedDisp_0.4-13.tar.gz'
 
+
+** check package
+#+begin_src sh :results output
+  R CMD check --as-cran  seedDisp_0.4-13.tar.gz
+#+end_src
+
+#+results:
+#+begin_example
+* using log directory '/Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/seedDisp.Rcheck'
+* using R version 3.0.1 (2013-05-16)
+* using platform: x86_64-apple-darwin10.8.0 (64-bit)
+* using session charset: ASCII
+* checking for file 'seedDisp/DESCRIPTION' ... OK
+* checking extension type ... Package
+* this is package 'seedDisp' version '0.4-13'
+* checking CRAN incoming feasibility ... NOTE
+Maintainer: 'Rainer M Krug <Rainer@krugs.de>'
+New submission
+* checking package namespace information ... OK
+* checking package dependencies ... OK
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... OK
+* checking for portable file names ... OK
+* checking for sufficient/correct file permissions ... OK
+* checking whether package 'seedDisp' can be installed ... OK
+* checking installed package size ... OK
+* checking package directory ... OK
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... OK
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... OK
+* checking R files for non-ASCII characters ... OK
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the namespace can be loaded with stated dependencies ... OK
+* checking whether the namespace can be unloaded cleanly ... OK
+* checking loading without being on the library search path ... OK
+* checking for unstated dependencies in R code ... OK
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... OK
+* checking Rd files ... OK
+* checking Rd metadata ... OK
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... OK
+* checking for code/documentation mismatches ... OK
+* checking Rd \usage sections ... OK
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking line endings in C/C++/Fortran sources/headers ... OK
+* checking line endings in Makefiles ... OK
+* checking for portable compilation flags in Makevars ... OK
+* checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
+* checking compiled code ... OK
+* checking examples ... NONE
+* checking PDF version of manual ... OK
+NOTE: There was 1 note.
+See
+  '/Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/seedDisp.Rcheck/00check.log'
+for details.
+#+end_example
 
 
 ** load library

@@ -31,7 +31,7 @@
 ##' in the function before calling the C function.
 ##' 
 ##' 
-##' @usage windDisp(SD2D, SEEDS, MASK)
+##' @usage windDisp(SD2D, SEEDS, MASK, zeroToNULL)
 ##' @name windDisp
 ##' @title Dispersal of seeds by wind
 ##' @param SD2D Sedd Dispersal kernel 2D - \code{matrix} defining the 2D seed dispersal kernel 

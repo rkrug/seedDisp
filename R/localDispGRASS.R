@@ -5,21 +5,21 @@
 ##' The seeds in the \code{input} layer are dispersed from each cell into the neighbouring layers following these
 ##' likelihoods:
 ##' 
-##' \code{\cr
-##' +------+------+------+ \cr
-##' | 1/16 | 1/16 | 1/16 | \cr
-##' +------+------+------+ \cr
-##' | 1/16 | 8/16 | 1/16 | \cr
-##' +------+------+------+ \cr
-##' | 1/16 | 1/16 | 1/16 | \cr
-##' +------+------+------+ \cr
-##' }
+#'' \preformatted{
+#'' +------+------+------+
+#'' | 1/16 | 1/16 | 1/16 |
+#'' +------+------+------+
+#'' | 1/16 | 8/16 | 1/16 |
+#'' +------+------+------+
+#'' | 1/16 | 1/16 | 1/16 |
+#'' +------+------+------+
+#'' }
 ##'
 ##' The resulting seed layer is saved and, if it exists and \code{overwrite==TRUE}, overwritten.
 ##'
 ##' The MASK in GRASS is respected.
 ##' 
-##' @usage localDispGRASS(input, output, overwrite)
+##' @usage localDispGRASS(input, output = "localDispSeeds", zeroToNULL = TRUE, overwrite = FALSE)
 ##' @name localDispGRASS
 ##' @title Dispersal of seeds in neighbouring cells
 ##' @param input name of GRASS raster layer specifying number of seeds to be dispersed - \code{character}

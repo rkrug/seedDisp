@@ -17,7 +17,7 @@
 ##' \item \bold{end}
 ##' }
 ##' 
-##' @usage waterDispGRASS(input, output="waterDispSeeds", slope="SLOPE", flowdir="FLOWDIR", overwrite=FALSE)
+##' @usage waterDispGRASS(input, output="waterDispSeeds", flowdir, depRates, zeroToNULL = TRUE, overwrite = FALSE)
 ##' @name waterDispGRASS
 ##' @title Dispersal of seeds by water
 ##' 
@@ -36,7 +36,7 @@ waterDispGRASS <- function(
     output = "waterDispSeeds",
     flowdir,
     depRates,
-    zeroToNull = TRUE,
+    zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
     if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
