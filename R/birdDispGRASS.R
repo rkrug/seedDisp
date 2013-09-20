@@ -62,7 +62,7 @@ birdDispGRASS <- function(
         output,
         NODATA = -1,
         zcol=3,
-        overwrite = overwrite
+        overwrite = TRUE
         )
     ## return name of output layer
     invisible(output)

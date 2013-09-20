@@ -75,16 +75,15 @@ Org-babel support for building
 * Internal configurations                      :noexport:
 ** Evaluate to run post tangle script
 #+begin_src emacs-lisp :results silent :tangle no :exports none
-  (add-hook 'org-babel-post-tangle-hook
-            (
-             lambda () 
-                    (call-process-shell-command "./postTangleScript.sh" nil 0 nil)
+(add-hook 'org-babel-post-tangle-hook
+          (
+           lambda () 
+                  (call-process-shell-command "./postTangleScript.sh" nil 0 nil)
   ;;              (async-shell-command "./postTangleScript.sh")
   ;;              (ess-load-file (save-window-excursion (replace-regexp-in-string ".org" ".R" buffer-file-name)))))
   ;;              (ess-load-file "nsa.R")))
   ;;              (ess-load-file "spreadSim.R")
-                    )
-            )
+                  ))
 #+end_src
 
 ** Post tangle script
@@ -107,6 +106,14 @@ Org-babel support for building
 #+end_src
 
 #+RESULTS:
+| Updating | collate             | directive  | in | /Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/DESCRIPTION |
+| Updating | namespace           | directives |    |                                                                      |
+| Writing  | birdDispGRASS.Rd    |            |    |                                                                      |
+| Writing  | localDispGRASS.Rd   |            |    |                                                                      |
+| Writing  | seedDisp-package.Rd |            |    |                                                                      |
+| Writing  | waterDispGRASS.Rd   |            |    |                                                                      |
+| Writing  | windDisp.Rd         |            |    |                                                                      |
+| Writing  | windDispGRASS.Rd    |            |    |                                                                      |
 
 
 * gitignore file (./.gitignore)
@@ -142,19 +149,12 @@ Complete version info
 #+end_src
 
 #+RESULTS:
-#+begin_example
-Version     :  0.4-13
-Commit date :  2013-08-06 11:50:57 +0200
-git HASH    :  4b874b68a6e5159eab8e2c1206c809958fa554eb
-git status  : 
-# On branch master
-# Changes to be committed:
-#   (use "git reset HEAD <file>..." to unstage)
-#
-#	modified:   .gitignore
-#	modified:   seedDisp.org
-#
-#+end_example
+: Version     :  0.4-13
+: Commit date :  2013-09-09 15:49:55 +0200
+: git HASH    :  1a70e43c2c6385e74ac6a0f577b6ae77dffd05bf
+: git status  : 
+: # On branch master
+: nothing to commit (working directory clean)
 
 
 
@@ -167,13 +167,13 @@ git status  :
 :padline: no
 :END: 
 #+begin_src fundamental
-  .git
-  ^.*\\.org$
-  ^seedDisp.
-  .gitignore
-  library
-  version
-  postTangleScript.sh
+.git
+^.*\\.org$
+^seedDisp.
+.gitignore
+library
+version
+postTangleScript.sh
 #+end_src
 
 
@@ -215,9 +215,9 @@ LinkingTo: Rcpp
 
 #+results:
 
-** Package description (seedDisp-package.R)
+** Package description (./R/package.R)
 :PROPERTIES:
-:tangle:   ./R/seedDisp-package.R
+:tangle:   ./R/package.R
 :eval: nil
 :no-expand: TRUE
 :comments: no
@@ -231,8 +231,8 @@ LinkingTo: Rcpp
 ##' ##' \tabular{ll}{
 ##' Package: \tab seedDisp\cr
 ##' Type: \tab Package\cr
-##' Version: \tab 0.4.13\cr
-##' Date: \tab 2013-09-09_14-51\cr
+##' Version: \tab MAJORVERSION.MINORVERSION-PATCHVERSION\cr
+##' Date: \tab TODAYSDATE\cr
 ##' License: \tab GPL (>= 2)\cr
 ##' LazyLoad: \tab yes\cr
 ##' }
@@ -242,6 +242,7 @@ LinkingTo: Rcpp
 ##' @author Rainer M Krug \email{Rainer@@krugs.de}
 NULL
 #+end_src
+
 
 * R directory (./R)
 ** Wind dispersal
@@ -282,6 +283,7 @@ NULL
 ##' @usage windDisp(SD2D, SEEDS, MASK, zeroToNULL)
 ##' @name windDisp
 ##' @title Dispersal of seeds by wind
+##' 
 ##' @param SD2D Sedd Dispersal kernel 2D - \code{matrix} defining the 2D seed dispersal kernel 
 ##' @param SEEDS \code{matrix} specifying the number of seeds to be dispersed
 ##' @param MASK \code{matrix} defining the area in which processing takes place (\code{!is.na(MASK)}) 
@@ -395,7 +397,7 @@ windDispGRASS <- function(
         output,
         NODATA = -1,
         zcol=2,
-        overwrite = overwrite
+        overwrite = TRUE
         )
     invisible(output)
 }
@@ -572,7 +574,7 @@ birdDispGRASS <- function(
         output,
         NODATA = -1,
         zcol=3,
-        overwrite = overwrite
+        overwrite = TRUE
         )
     ## return name of output layer
     invisible(output)
@@ -760,15 +762,10 @@ waterDispGRASS <- function(
         map = "_tmp.wdout.dep.final",
         setnull = "0"
         )
-    if (overwrite) {
-        fl <- "overwrite"
-    } else {
-        fl <- NULL
-    }
     execGRASS(
         "g.copy",
         rast = paste0("_tmp.wdout.dep.final", ",", output),
-        flags = fl
+        flags = "overwrite"
         )
     ## and delete temporary layers
     execGRASS(
@@ -959,7 +956,6 @@ Write vignette
 : * checking for empty or unneeded directories
 : Removed empty directory 'seedDisp/inst'
 : * building 'seedDisp_0.4-13.tar.gz'
-
 
 ** check package
 #+begin_src sh :results output

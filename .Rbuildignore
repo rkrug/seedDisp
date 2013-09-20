@@ -1,10 +1,10 @@
-  .git
-  ^.*\\.org$
-  ^seedDisp.
-  .gitignore
-  library
-  version
-  postTangleScript.sh
+.git
+^.*\\.org$
+^seedDisp.
+.gitignore
+library
+version
+postTangleScript.sh
 
 ;; Local Variables:
 ;; org-babel-tangled-file: t

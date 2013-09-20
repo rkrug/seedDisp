@@ -176,15 +176,10 @@ waterDispGRASS <- function(
         map = "_tmp.wdout.dep.final",
         setnull = "0"
         )
-    if (overwrite) {
-        fl <- "overwrite"
-    } else {
-        fl <- NULL
-    }
     execGRASS(
         "g.copy",
         rast = paste0("_tmp.wdout.dep.final", ",", output),
-        flags = fl
+        flags = "overwrite"
         )
     ## and delete temporary layers
     execGRASS(

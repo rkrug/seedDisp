@@ -34,6 +34,7 @@
 ##' @usage windDisp(SD2D, SEEDS, MASK, zeroToNULL)
 ##' @name windDisp
 ##' @title Dispersal of seeds by wind
+##' 
 ##' @param SD2D Sedd Dispersal kernel 2D - \code{matrix} defining the 2D seed dispersal kernel 
 ##' @param SEEDS \code{matrix} specifying the number of seeds to be dispersed
 ##' @param MASK \code{matrix} defining the area in which processing takes place (\code{!is.na(MASK)}) 

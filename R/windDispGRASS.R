@@ -65,7 +65,7 @@ windDispGRASS <- function(
         output,
         NODATA = -1,
         zcol=2,
-        overwrite = overwrite
+        overwrite = TRUE
         )
     invisible(output)
 }
