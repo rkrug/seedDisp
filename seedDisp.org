@@ -66,8 +66,8 @@ Org-babel support for building
 #+PROPERTY: comments yes
 #+PROPERTY: padline no
 #+PROPERTY: var MAJORVERSION=0
-#+PROPERTY: var+ MINORVERSION=4
-#+PROPERTY: var+ PATCHVERSION=13
+#+PROPERTY: var+ MINORVERSION=5
+#+PROPERTY: var+ PATCHVERSION=0
 #+PROPERTY: var+ GITHASH="testhash" 
 #+PROPERTY: var+ GITCOMMITDATE="testdate"
 :END:
@@ -96,10 +96,10 @@ Org-babel support for building
   sed -i '' s/PATCHVERSION/$PATCHVERSION/ ./DESCRIPTION
   sed -i '' s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./DESCRIPTION
 
-  sed -i '' s/MAJORVERSION/$MAJORVERSION/ ./seedDisp-package.R
-  sed -i '' s/MINORVERSION/$MINORVERSION/ ./seedDisp-package.R
-  sed -i '' s/PATCHVERSION/$PATCHVERSION/ ./seedDisp-package.R
-  sed -i '' s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./seedDisp-package.R
+  sed -i '' s/MAJORVERSION/$MAJORVERSION/ ./R/package.R
+  sed -i '' s/MINORVERSION/$MINORVERSION/ ./R/package.R
+  sed -i '' s/PATCHVERSION/$PATCHVERSION/ ./R/package.R
+  sed -i '' s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./R/package.R
 
   Rscript -e "library(roxygen2);roxygenize('.', copy.package=FALSE, unlink.target=FALSE)"
   # rm -f ./postTangleScript.sh
@@ -108,12 +108,7 @@ Org-babel support for building
 #+RESULTS:
 | Updating | collate             | directive  | in | /Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/DESCRIPTION |
 | Updating | namespace           | directives |    |                                                                      |
-| Writing  | birdDispGRASS.Rd    |            |    |                                                                      |
-| Writing  | localDispGRASS.Rd   |            |    |                                                                      |
 | Writing  | seedDisp-package.Rd |            |    |                                                                      |
-| Writing  | waterDispGRASS.Rd   |            |    |                                                                      |
-| Writing  | windDisp.Rd         |            |    |                                                                      |
-| Writing  | windDispGRASS.Rd    |            |    |                                                                      |
 
 
 * gitignore file (./.gitignore)
@@ -197,7 +192,7 @@ Maintainer: Rainer M. Krug <Rainer@krugs.de>
 Description: Collection of different seed dispersal routines.
 License: GPL-3
 LazyLoad: yes
-Depends: Rcpp (>= 0.9.4), spgrass6
+Imports: Rcpp (>= 0.9.4), sp, spgrass6
 LinkingTo: Rcpp  
 #+end_src
 
@@ -228,7 +223,7 @@ LinkingTo: Rcpp
 ##' This package is a collection of different seed sispersal routines. 
 ##'
 ##' 
-##' ##' \tabular{ll}{
+##' \tabular{ll}{
 ##' Package: \tab seedDisp\cr
 ##' Type: \tab Package\cr
 ##' Version: \tab MAJORVERSION.MINORVERSION-PATCHVERSION\cr
@@ -240,6 +235,9 @@ LinkingTo: Rcpp
 ##' @name seedDisp-package
 ##' @docType package
 ##' @author Rainer M Krug \email{Rainer@@krugs.de}
+##' @import Rcpp
+##' @import sp
+##' @import spgrass6
 NULL
 #+end_src
 
