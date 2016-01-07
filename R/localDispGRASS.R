@@ -1,4 +1,4 @@
-## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*localDispGRASS][localDispGRASS:1]]
+## [[file:seedDisp.org::*localDispGRASS][localDispGRASS:1]]
 ##' Disperses seeds locally, i.e. in neighbouring cells, from an input raster layer in GRASS
 ##' and stores the dispersed seeds in an output layer in GRASS
 ##'
@@ -101,7 +101,6 @@ localDispGRASS <- function(
 ## localDispGRASS:1 ends here
 
 ## Local Variables:
-## org-babel-tangled-file: t
 ## buffer-read-only: t
 ## eval:: (auto-revert-mode)
 ## End:

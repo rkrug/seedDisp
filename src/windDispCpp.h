@@ -1,4 +1,4 @@
-// [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*windDispCpp.h][windDispCpp\.h:1]]
+// [[file:seedDisp.org::*windDispCpp.h][windDispCpp\.h:1]]
   #ifndef _test_WINDDISPCPP_H
   #define _test_WINDDISPCPP_H
   

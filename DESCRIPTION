@@ -1,8 +1,8 @@
 Package: seedDisp
 Type: Package
 Title: Dispersal of seed routines
-Version: 0.5-0
-Date: 2013-10-01_10-14
+Version: 0.5-1
+Date: 2016-01-07_13-48
 Author: Rainer M. Krug <Rainer@krugs.de>
 Maintainer: Rainer M. Krug <Rainer@krugs.de>
 Description: Collection of different seed dispersal routines.
@@ -11,12 +11,6 @@ LazyLoad: yes
 Imports:
     Rcpp (>= 0.9.4),
     sp,
-    spgrass6
+    rgrass7
 LinkingTo: Rcpp
-Collate:
-    'birdDispGRASS.R'
-    'localDispGRASS.R'
-    'package.R'
-    'waterDispGRASS.R'
-    'windDisp.R'
-    'windDispGRASS.R'
+RoxygenNote: 5.0.1

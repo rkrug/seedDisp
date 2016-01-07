@@ -1,4 +1,4 @@
-## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*windDisp][windDisp:1]]
+## [[file:seedDisp.org::*windDisp][windDisp:1]]
 ##' Disperses seeds from a matrix by using a 2 dimensional dispersal kernel
 ##'
 ##' This function uses a 2D seed dispersal kernel in form of a \code{matrix} to disperse seeds
@@ -80,7 +80,6 @@ windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
 ## windDisp:1 ends here
 
 ## Local Variables:
-## org-babel-tangled-file: t
 ## buffer-read-only: t
 ## eval:: (auto-revert-mode)
 ## End:

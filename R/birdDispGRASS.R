@@ -1,4 +1,4 @@
-## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*birdDispGRASS][birdDispGRASS:1]]
+## [[file:seedDisp.org::*birdDispGRASS][birdDispGRASS:1]]
 ##' Seed dispersal by birds from a seed layer using GRASS
 ##'
 ##' This is a "dumb" implementation of sedd dispersal by birds, simply randomly distributing
@@ -30,7 +30,7 @@ birdDispGRASS <- function(
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     MASK <- "MASK"
-    seeds <- readRAST6(
+    seeds <- readRAST(
         c(
             input,
             MASK
@@ -57,7 +57,7 @@ birdDispGRASS <- function(
     } else {
         seeds[[3]][is.na(seeds[[3]])] <- 0
     }
-    writeRAST6(
+    writeRAST(
         seeds,
         output,
         NODATA = -1,
@@ -70,7 +70,6 @@ birdDispGRASS <- function(
 ## birdDispGRASS:1 ends here
 
 ## Local Variables:
-## org-babel-tangled-file: t
 ## buffer-read-only: t
 ## eval:: (auto-revert-mode)
 ## End:

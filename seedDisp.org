@@ -67,7 +67,7 @@ Org-babel support for building
 #+PROPERTY: padline no
 #+PROPERTY: var MAJORVERSION=0
 #+PROPERTY: var+ MINORVERSION=5
-#+PROPERTY: var+ PATCHVERSION=0
+#+PROPERTY: var+ PATCHVERSION=1
 #+PROPERTY: var+ GITHASH="testhash" 
 #+PROPERTY: var+ GITCOMMITDATE="testdate"
 :END:
@@ -101,14 +101,13 @@ Org-babel support for building
   sed -i '' s/PATCHVERSION/$PATCHVERSION/ ./R/package.R
   sed -i '' s/TODAYSDATE/`date +%Y-%m-%d_%H-%M`/ ./R/package.R
 
-  Rscript -e "library(roxygen2);roxygenize('.', copy.package=FALSE, unlink.target=FALSE)"
+  Rscript -e "library(roxygen2);roxygenize('.')"
   # rm -f ./postTangleScript.sh
 #+end_src
 
 #+RESULTS:
-| Updating | collate             | directive  | in | /Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/DESCRIPTION |
-| Updating | namespace           | directives |    |                                                                      |
-| Writing  | seedDisp-package.Rd |            |    |                                                                      |
+| Updating | roxygen             | version | in | /Users/rainerkrug/Documents/Projects/R-Packages/AlienSpread/seedDisp/DESCRIPTION |
+| Writing  | seedDisp-package.Rd |         |    |                                                                                  |
 
 
 * gitignore file (./.gitignore)
@@ -192,7 +191,7 @@ Maintainer: Rainer M. Krug <Rainer@krugs.de>
 Description: Collection of different seed dispersal routines.
 License: GPL-3
 LazyLoad: yes
-Imports: Rcpp (>= 0.9.4), sp, spgrass6
+Imports: Rcpp (>= 0.9.4), sp, rgrass7
 LinkingTo: Rcpp  
 #+end_src
 
@@ -237,7 +236,7 @@ LinkingTo: Rcpp
 ##' @author Rainer M Krug \email{Rainer@@krugs.de}
 ##' @import Rcpp
 ##' @import sp
-##' @import spgrass6
+##' @import rgrass7
 NULL
 #+end_src
 
@@ -361,7 +360,7 @@ windDispGRASS <- function(
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     ##
-    seeds <- readRAST6(
+    seeds <- readRAST(
         c(
             input,
             "MASK"
@@ -390,7 +389,7 @@ windDispGRASS <- function(
     
     mode(seeds[[2]]) <- "double"
     ## seeds@proj4string <- parameter$proj4string
-    writeRAST6(
+    writeRAST(
         seeds,
         output,
         NODATA = -1,
@@ -540,7 +539,7 @@ birdDispGRASS <- function(
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     MASK <- "MASK"
-    seeds <- readRAST6(
+    seeds <- readRAST(
         c(
             input,
             MASK
@@ -567,7 +566,7 @@ birdDispGRASS <- function(
     } else {
         seeds[[3]][is.na(seeds[[3]])] <- 0
     }
-    writeRAST6(
+    writeRAST(
         seeds,
         output,
         NODATA = -1,
@@ -960,67 +959,6 @@ Write vignette
   R CMD check --as-cran  seedDisp_0.4-13.tar.gz
 #+end_src
 
-#+results:
-#+begin_example
-* using log directory '/Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/seedDisp.Rcheck'
-* using R version 3.0.1 (2013-05-16)
-* using platform: x86_64-apple-darwin10.8.0 (64-bit)
-* using session charset: ASCII
-* checking for file 'seedDisp/DESCRIPTION' ... OK
-* checking extension type ... Package
-* this is package 'seedDisp' version '0.4-13'
-* checking CRAN incoming feasibility ... NOTE
-Maintainer: 'Rainer M Krug <Rainer@krugs.de>'
-New submission
-* checking package namespace information ... OK
-* checking package dependencies ... OK
-* checking if this is a source package ... OK
-* checking if there is a namespace ... OK
-* checking for executable files ... OK
-* checking for hidden files and directories ... OK
-* checking for portable file names ... OK
-* checking for sufficient/correct file permissions ... OK
-* checking whether package 'seedDisp' can be installed ... OK
-* checking installed package size ... OK
-* checking package directory ... OK
-* checking DESCRIPTION meta-information ... OK
-* checking top-level files ... OK
-* checking for left-over files ... OK
-* checking index information ... OK
-* checking package subdirectories ... OK
-* checking R files for non-ASCII characters ... OK
-* checking R files for syntax errors ... OK
-* checking whether the package can be loaded ... OK
-* checking whether the package can be loaded with stated dependencies ... OK
-* checking whether the package can be unloaded cleanly ... OK
-* checking whether the namespace can be loaded with stated dependencies ... OK
-* checking whether the namespace can be unloaded cleanly ... OK
-* checking loading without being on the library search path ... OK
-* checking for unstated dependencies in R code ... OK
-* checking S3 generic/method consistency ... OK
-* checking replacement functions ... OK
-* checking foreign function calls ... OK
-* checking R code for possible problems ... OK
-* checking Rd files ... OK
-* checking Rd metadata ... OK
-* checking Rd cross-references ... OK
-* checking for missing documentation entries ... OK
-* checking for code/documentation mismatches ... OK
-* checking Rd \usage sections ... OK
-* checking Rd contents ... OK
-* checking for unstated dependencies in examples ... OK
-* checking line endings in C/C++/Fortran sources/headers ... OK
-* checking line endings in Makefiles ... OK
-* checking for portable compilation flags in Makevars ... OK
-* checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
-* checking compiled code ... OK
-* checking examples ... NONE
-* checking PDF version of manual ... OK
-NOTE: There was 1 note.
-See
-  '/Users/rainerkrug/Documents/Projects/R-Packages/seedDisp/seedDisp.Rcheck/00check.log'
-for details.
-#+end_example
 
 
 ** load library

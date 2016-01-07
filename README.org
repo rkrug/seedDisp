@@ -1,4 +1,4 @@
-# [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*README.org][README\.org:1]]
+# [[file:seedDisp.org::*README.org][README\.org:1]]
 #+TITLE: seedDisp --- an R package to simulate seed dispersal
 #+DATE: <2013-09-03 Tue>
 #+AUTHOR: Rainer M. Krug

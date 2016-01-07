@@ -1,4 +1,4 @@
-## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*waterDispGRASS][waterDispGRASS:1]]
+## [[file:seedDisp.org::*waterDispGRASS][waterDispGRASS:1]]
 ##' Water disperse seeds from a seed layer using GRASS
 ##'
 ##' This function disperses seeds using water dispersal using the raster \code{flowdir} in GRASS agnps format
@@ -206,7 +206,6 @@ waterDispGRASS <- function(
 ## waterDispGRASS:1 ends here
 
 ## Local Variables:
-## org-babel-tangled-file: t
 ## buffer-read-only: t
 ## eval:: (auto-revert-mode)
 ## End:

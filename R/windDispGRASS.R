@@ -1,4 +1,4 @@
-## [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*windDispGRASS][windDispGRASS:1]]
+## [[file:seedDisp.org::*windDispGRASS][windDispGRASS:1]]
 ##' Disperses seeds from a input raster layer in GRASS by using a 2 dimensional dispersal kernel \code{matrix}
 ##' and stores the dispersed seeds in an output layer in RASS
 ##'
@@ -31,7 +31,7 @@ windDispGRASS <- function(
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     ##
-    seeds <- readRAST6(
+    seeds <- readRAST(
         c(
             input,
             "MASK"
@@ -60,7 +60,7 @@ windDispGRASS <- function(
     
     mode(seeds[[2]]) <- "double"
     ## seeds@proj4string <- parameter$proj4string
-    writeRAST6(
+    writeRAST(
         seeds,
         output,
         NODATA = -1,
@@ -72,7 +72,6 @@ windDispGRASS <- function(
 ## windDispGRASS:1 ends here
 
 ## Local Variables:
-## org-babel-tangled-file: t
 ## buffer-read-only: t
 ## eval:: (auto-revert-mode)
 ## End:

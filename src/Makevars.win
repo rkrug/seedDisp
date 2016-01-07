@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[file:~/Documents/Projects/AlienManagementDrakensberg/sim/packages/seedDisp/seedDisp.org::*Makevars.win][Makevars\.win:1]]
+# [[file:seedDisp.org::*Makevars.win][Makevars\.win:1]]
   ## Use the R_HOME indirection to support installations of multiple R version
   PKG_LIBS = $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "Rcpp:::LdFlags()")
 # Makevars\.win:1 ends here
