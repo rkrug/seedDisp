@@ -1,4 +1,4 @@
-## [[file:seedDisp.org::*windDispGRASS][windDispGRASS:1]]
+## [[file:../seedDisp.org::*windDispGRASS][windDispGRASS:1]]
 ##' Disperses seeds from a input raster layer in GRASS by using a 2 dimensional dispersal kernel \code{matrix}
 ##' and stores the dispersed seeds in an output layer in RASS
 ##'
@@ -27,7 +27,7 @@ windDispGRASS <- function(
     zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
+    if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     ##

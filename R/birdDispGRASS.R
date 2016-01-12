@@ -1,4 +1,4 @@
-## [[file:seedDisp.org::*birdDispGRASS][birdDispGRASS:1]]
+## [[file:../seedDisp.org::*birdDispGRASS][birdDispGRASS:1]]
 ##' Seed dispersal by birds from a seed layer using GRASS
 ##'
 ##' This is a "dumb" implementation of sedd dispersal by birds, simply randomly distributing
@@ -26,7 +26,7 @@ birdDispGRASS <- function(
     zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+    if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     MASK <- "MASK"

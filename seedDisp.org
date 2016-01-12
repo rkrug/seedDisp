@@ -67,7 +67,7 @@ Org-babel support for building
 #+PROPERTY: padline no
 #+PROPERTY: var MAJORVERSION=0
 #+PROPERTY: var+ MINORVERSION=5
-#+PROPERTY: var+ PATCHVERSION=1
+#+PROPERTY: var+ PATCHVERSION=2
 #+PROPERTY: var+ GITHASH="testhash" 
 #+PROPERTY: var+ GITCOMMITDATE="testdate"
 :END:
@@ -356,7 +356,7 @@ windDispGRASS <- function(
     zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
+    if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     ##
@@ -441,7 +441,7 @@ localDispGRASS <- function(
     zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+    if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     r.mapcalc <- function(...)
@@ -535,7 +535,7 @@ birdDispGRASS <- function(
     zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+    if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     MASK <- "MASK"
@@ -622,7 +622,7 @@ waterDispGRASS <- function(
     zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+    if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
 

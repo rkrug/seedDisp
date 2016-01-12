@@ -1,4 +1,4 @@
-## [[file:seedDisp.org::*waterDispGRASS][waterDispGRASS:1]]
+## [[file:../seedDisp.org::*waterDispGRASS][waterDispGRASS:1]]
 ##' Water disperse seeds from a seed layer using GRASS
 ##'
 ##' This function disperses seeds using water dispersal using the raster \code{flowdir} in GRASS agnps format
@@ -39,7 +39,7 @@ waterDispGRASS <- function(
     zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+    if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
 

@@ -1,4 +1,4 @@
-## [[file:seedDisp.org::*windDisp][windDisp:1]]
+## [[file:../seedDisp.org::*windDisp][windDisp:1]]
 ##' Disperses seeds from a matrix by using a 2 dimensional dispersal kernel
 ##'
 ##' This function uses a 2D seed dispersal kernel in form of a \code{matrix} to disperse seeds

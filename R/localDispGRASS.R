@@ -1,4 +1,4 @@
-## [[file:seedDisp.org::*localDispGRASS][localDispGRASS:1]]
+## [[file:../seedDisp.org::*localDispGRASS][localDispGRASS:1]]
 ##' Disperses seeds locally, i.e. in neighbouring cells, from an input raster layer in GRASS
 ##' and stores the dispersed seeds in an output layer in GRASS
 ##'
@@ -37,7 +37,7 @@ localDispGRASS <- function(
     zeroToNULL = TRUE,
     overwrite = FALSE
     ) {
-    if ( length( execGRASS("g.mlist", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
+    if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) )  & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
     } 
     r.mapcalc <- function(...)
