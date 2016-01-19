@@ -48,26 +48,37 @@
 ##' @export 
 
 windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
-    ## Calculate size parameter of sd2D
-    dx2 <- (ncol(SD2D) - 1)
-    dy2 <- (nrow(SD2D) - 1)
-    dx <- dx2 / 2
-    dy <- dy2 / 2
+    ## Calculate width of buffer (half the width of SD2D)
+    bwx2 <- as.integer((ncol(SD2D) - 1))
+    bwxf <- bwx2 / 2
+    bwx  <- as.integer(bwx2 / 2)
+    if (bwxf != bwx) {
+        stop("ncol(SD2D) has to be an odd number!")
+    }
+    ##
+    bwy2 <- as.integer((nrow(SD2D) - 1))
+    bwyf <- bwy2 / 2
+    bwy <- as.integer(bwyf)
+    if (bwyf != bwy) {
+        stop("ncol(SD2D) has to be an odd number!")
+    }
     ## buffer MASK and SEEDS for dispersal into cells at the edge
-    buffer <- matrix(NA, nrow=nrow(SEEDS), ncol=dx)
+    buffer <- matrix(NA, nrow=nrow(SEEDS), ncol=bwx)
     SEEDS <- cbind(buffer, SEEDS, buffer)
-    MASK <- cbind(buffer, MASK, buffer)
-    buffer <- matrix(NA, ncol=ncol(SEEDS), nrow=dy)
+    MASKin <- cbind(buffer, MASK, buffer)
+    ##
+    buffer <- matrix(NA, ncol=ncol(SEEDS), nrow=bwy)
     SEEDS <- rbind(buffer, SEEDS, buffer)
-    MASK <- rbind(buffer, MASK, buffer)
+    MASKin <- rbind(buffer, MASKin, buffer)
     ## call C++ function
     output <- .Call(
         "windDispCpp",
-        dx2,
-        dy2,
-        SD2D,
-        SEEDS,
-        MASK,
+        bwx     = bwx,                            # integer number - buffer width x direction
+        bwy     = bwy,                            # integer number - buffer width y direction
+        SD2D    = SD2D,                           # numeric matrix - seed dispersal kernel
+        SEEDSin = SEEDS,                          # numeric matrix - buffered seeds matrix to be dispersed
+        MASKin  = MASKin,                         # numeric matrix - buffered mask fir cells from which to be dispersed
+        MASKout = MASK,                           # numeric matrix - not buffered mask of cells for which to calculate the number of seeds
         PACKAGE = "seedDisp"
         )
     if (zeroToNULL) {

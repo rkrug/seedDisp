@@ -1,5 +1,3 @@
-# -*- org-babel-tangled-file: t; org-babel-tangle-run-postTangleScript: t; -*-
-
 #+TITLE:     seedDisp.org
 #+AUTHOR:    Rainer M Krug
 #+EMAIL:     Rainer@krugs.de
@@ -66,8 +64,8 @@ Org-babel support for building
 #+PROPERTY: comments yes
 #+PROPERTY: padline no
 #+PROPERTY: var MAJORVERSION=0
-#+PROPERTY: var+ MINORVERSION=5
-#+PROPERTY: var+ PATCHVERSION=2
+#+PROPERTY: var+ MINORVERSION=6
+#+PROPERTY: var+ PATCHVERSION=0
 #+PROPERTY: var+ GITHASH="testhash" 
 #+PROPERTY: var+ GITCOMMITDATE="testdate"
 :END:
@@ -106,8 +104,6 @@ Org-babel support for building
 #+end_src
 
 #+RESULTS:
-| Updating | roxygen             | version | in | /Users/rainerkrug/Documents/Projects/R-Packages/AlienSpread/seedDisp/DESCRIPTION |
-| Writing  | seedDisp-package.Rd |         |    |                                                                                  |
 
 
 * gitignore file (./.gitignore)
@@ -294,26 +290,37 @@ NULL
 ##' @export 
 
 windDisp <- function(SD2D, SEEDS, MASK, zeroToNULL) {
-    ## Calculate size parameter of sd2D
-    dx2 <- (ncol(SD2D) - 1)
-    dy2 <- (nrow(SD2D) - 1)
-    dx <- dx2 / 2
-    dy <- dy2 / 2
+    ## Calculate width of buffer (half the width of SD2D)
+    bwx2 <- as.integer((ncol(SD2D) - 1))
+    bwxf <- bwx2 / 2
+    bwx  <- as.integer(bwx2 / 2)
+    if (bwxf != bwx) {
+        stop("ncol(SD2D) has to be an odd number!")
+    }
+    ##
+    bwy2 <- as.integer((nrow(SD2D) - 1))
+    bwyf <- bwy2 / 2
+    bwy <- as.integer(bwyf)
+    if (bwyf != bwy) {
+        stop("ncol(SD2D) has to be an odd number!")
+    }
     ## buffer MASK and SEEDS for dispersal into cells at the edge
-    buffer <- matrix(NA, nrow=nrow(SEEDS), ncol=dx)
+    buffer <- matrix(NA, nrow=nrow(SEEDS), ncol=bwx)
     SEEDS <- cbind(buffer, SEEDS, buffer)
-    MASK <- cbind(buffer, MASK, buffer)
-    buffer <- matrix(NA, ncol=ncol(SEEDS), nrow=dy)
+    MASKin <- cbind(buffer, MASK, buffer)
+    ##
+    buffer <- matrix(NA, ncol=ncol(SEEDS), nrow=bwy)
     SEEDS <- rbind(buffer, SEEDS, buffer)
-    MASK <- rbind(buffer, MASK, buffer)
+    MASKin <- rbind(buffer, MASKin, buffer)
     ## call C++ function
     output <- .Call(
         "windDispCpp",
-        dx2,
-        dy2,
-        SD2D,
-        SEEDS,
-        MASK,
+        bwx     = bwx,                            # integer number - buffer width x direction
+        bwy     = bwy,                            # integer number - buffer width y direction
+        SD2D    = SD2D,                           # numeric matrix - seed dispersal kernel
+        SEEDSin = SEEDS,                          # numeric matrix - buffered seeds matrix to be dispersed
+        MASKin  = MASKin,                         # numeric matrix - buffered mask fir cells from which to be dispersed
+        MASKout = MASK,                           # numeric matrix - not buffered mask of cells for which to calculate the number of seeds
         PACKAGE = "seedDisp"
         )
     if (zeroToNULL) {
@@ -358,7 +365,7 @@ windDispGRASS <- function(
     ) {
     if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
-    } 
+    }
     ##
     seeds <- readRAST(
         c(
@@ -367,17 +374,17 @@ windDispGRASS <- function(
             ),
         NODATA=-1
         )
-    ## seeds.m <- sgdfToMatrix(seeds, 1)
+    ##
     seeds.m <- matrix(
         seeds[[1]],
         nrow=gridparameters(seeds)$cells.dim[1],
         ncol=gridparameters(seeds)$cells.dim[2])
-    ## mask.m <- sgdfToMatrix(seeds, 2)
+    ##
     mask.m <- matrix(
         seeds[[2]],
         nrow=gridparameters(seeds)$cells.dim[1],
         ncol=gridparameters(seeds)$cells.dim[2])
-    
+    ##
     dispSeeds.m <- windDisp(
         SD2D = SD2D,
         SEEDS = seeds.m,
@@ -483,7 +490,9 @@ localDispGRASS <- function(
     ## remove tmp
     execGRASS(
         cmd = "g.remove",
-        rast = tmp
+        type = "raster",
+        name = tmp,
+        flags = "f"
         )
     ## if zeroToNULL
     if (zeroToNULL) {
@@ -633,6 +642,7 @@ waterDispGRASS <- function(
         ## calculation of sum of seeds left to be dispersed
         univ <- execGRASS("r.univar", map=stepInput, intern=TRUE)
         sm <- grep("sum", univ, value=TRUE)
+        paste("############", as.numeric(strsplit( sm, split=": " )[[1]][2]), "############")
         s <- as.numeric(strsplit( sm, split=": " )[[1]][2])
         if ( s <= 0 ) {
             return(FALSE)
@@ -709,8 +719,9 @@ waterDispGRASS <- function(
             
             ## and finally delete all temporary layers
             execGRASS(
-                "g.mremove",
-                rast = "_tmp.wd.*",
+                "g.remove",
+                type = "raster",
+                pattern = "_tmp.wd.*",
                 flags = "f"
                 )
             return(TRUE)
@@ -720,21 +731,24 @@ waterDispGRASS <- function(
     ## copy input in temporary input layer
     execGRASS(
         "g.copy",
-        rast = paste0(input, ",_tmp.wdout.input")
+        raster = paste0(input, ",_tmp.wdout.input")
         )
     ## create empty deposit layer
     execGRASS(
         "r.mapcalc",
         expression = "_tmp.wdout.dep.final = 0"
         )
-    while (oneStep("_tmp.wdout.input", "_tmp.wdout.dep", "_tmp.wdout.disp", flowdir, depRates)) {
-        univ <- execGRASS("r.univar", map="_tmp.wdout.input", intern=TRUE)
-        sm <- grep("sum", univ, value=TRUE)
-        paste("############", as.numeric(strsplit( sm, split=": " )[[1]][2]), "############")
+    while ( oneStep(
+        stepInput = "_tmp.wdout.input",
+        stepDep = "_tmp.wdout.dep",
+        stepToDisp = "_tmp.wdout.disp",
+        stepFlowdir = flowdir,
+        stepDepRates = depRates
+    ) ) {
         ## copy still to be dispersed seeds into temporary input layer
         execGRASS(
             "g.copy",
-            rast = "_tmp.wdout.disp,_tmp.wdout.input",
+            raster = "_tmp.wdout.disp,_tmp.wdout.input",
             flags = "overwrite"
             )
         ## add the deposited seeds to the final deposit layer
@@ -746,11 +760,11 @@ waterDispGRASS <- function(
         ## remove _tmp.wdout.dep
         execGRASS(
             "g.remove",
-            rast = "_tmp.wdout.dep",
+            type = "raster", 
+            name = "_tmp.wdout.dep",
             flags = "f"
             )
         ## and continue, i.e. execute oneStep() and repeat until oneStep returns FALSE
-        ## Then nothing needs to be done anymore
     }  
    
     ## set 0 values to null and write temporary layer to output layer
@@ -761,13 +775,14 @@ waterDispGRASS <- function(
         )
     execGRASS(
         "g.copy",
-        rast = paste0("_tmp.wdout.dep.final", ",", output),
+        raster = paste0("_tmp.wdout.dep.final", ",", output),
         flags = "overwrite"
         )
     ## and delete temporary layers
     execGRASS(
-        "g.mremove",
-        rast = "_tmp.wdout.*",
+        "g.remove",
+        type = "raster",
+        pattern = "_tmp.wdout.*",
         flags = "f"
         )
     ## if zeroToNULL
@@ -831,28 +846,28 @@ waterDispGRASS <- function(
 #+end_src
 ** windDispCpp.h
 #+begin_src c++ :tangle ./src/windDispCpp.h
-  #ifndef _test_WINDDISPCPP_H
-  #define _test_WINDDISPCPP_H
+#ifndef _test_WINDDISPCPP_H
+#define _test_WINDDISPCPP_H
   
-  #include <Rcpp.h>
+#include <Rcpp.h>
   
-  /*
-   * note : RcppExport is an alias to `extern "C"` defined by Rcpp.
-   *
-   * It gives C calling convention to the rcpp_hello_world function so that 
-   * it can be called from .Call in R. Otherwise, the C++ compiler mangles the 
-   * name of the function and .Call can't find it.
-   *
-   * It is only useful to use RcppExport when the function is intended to be called
-   * by .Call. See the thread http://thread.gmane.org/gmane.comp.lang.r.rcpp/649/focus=672
-   * on Rcpp-devel for a misuse of RcppExport
-   */
+/*
+ ,* note : RcppExport is an alias to `extern "C"` defined by Rcpp.
+ ,*
+ ,* It gives C calling convention to the rcpp_hello_world function so that 
+ ,* it can be called from .Call in R. Otherwise, the C++ compiler mangles the 
+ ,* name of the function and .Call can't find it.
+ ,*
+ ,* It is only useful to use RcppExport when the function is intended to be called
+ ,* by .Call. See the thread http://thread.gmane.org/gmane.comp.lang.r.rcpp/649/focus=672
+ ,* on Rcpp-devel for a misuse of RcppExport
+ ,*/
   
-  RcppExport SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK) ;
+RcppExport SEXP windDispCpp( SEXP BWX, SEXP BWY, SEXP SD2D, SEXP SEEDSin, SEXP MASKin, SEXP MASKout) ;
   
-  // definition
+// definition
   
-  #endif
+#endif
   
 #+end_src
 
@@ -860,39 +875,46 @@ waterDispGRASS <- function(
 #+BEGIN_SRC c++ :tangle ./src/windDispCpp.cpp
 #include "windDispCpp.h"
   
-SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
+SEXP windDispCpp( 
+                 SEXP BWX, SEXP BWY, // width of buffering in x and y direction
+                 SEXP SD2D,          // seed dispersal kernel
+                 SEXP SEEDSin,       // buffered seed input matrix
+                 SEXP MASKin,        // buffered input mask
+                 SEXP MASKOut        // MASK for cells to return and template for return matrix
+ ){
   using namespace Rcpp;
   
   // The input parameter  
-  int dx2 = as<int>(DX2); // by reference or value?
-  int dy2 = as<int>(DY2);
-  NumericVector sd2D (SD2D); // by reference!
-  IntegerMatrix seeds (SEEDS);
-  IntegerMatrix mask (MASK);
+  int bwx = Rcpp::as<int>(BWX); // by reference or value?
+  int bwy = Rcpp::as<int>(BWY);
+  Rcpp::NumericVector sd2D     = Rcpp::clone<Rcpp::NumericVector>(SD2D); // by reference!
+  Rcpp::NumericMatrix seedsIn = Rcpp::clone<Rcpp::NumericMatrix>(SEEDSin);
+  Rcpp::NumericMatrix maskIn  = Rcpp::clone<Rcpp::NumericMatrix>(MASKin);
+  Rcpp::NumericMatrix maskOut     = Rcpp::clone<Rcpp::NumericMatrix>(MASKOut);
   
-  // result vector
-  IntegerMatrix dispSeeds = clone<IntegerMatrix>(mask);
-
+  // result matrix
+  Rcpp::NumericMatrix output = Rcpp::clone<Rcpp::NumericMatrix>(MASKOut);
+  std::fill(output.begin(), output.end(), 0); // just to make sure set all to 0
+  
   // internal variables
-  IntegerVector s (sd2D.size());
-  RNGScope scope;                 // N.B. Needed when calling random number generators
+  Rcpp::IntegerVector s(sd2D.size());
 
   int res; 
-  int nc = dispSeeds.ncol();
-  int nr = dispSeeds.nrow();
 
-  // BEGIN loop over seeds grid ("moving")
-  for( int y=0; y < nc; y++ ){
-    for( int x=0; x < nr; x++ ){
+  RNGScope scope;                 // N.B. Needed when calling random number generators
+
+  // BEGIN loop over output seeds grid ("moving")
+  for( int y=0; y < output.ncol(); y++ ){
+    for( int x=0; x < output.nrow(); x++ ){
       // if dispBEGIN loop over sd2D ("window")
-      // #### begin if MASK <> NA
-      if ( dispSeeds(x, y) >= 0 ) { 
+      // #### begin if MASKOut <> NA
+      if ( maskOut(x, y) >= 0 ) { 
         int indS = 0;
-        // loop ofer 2d2D and copy values into s
-        for( int xS=x; xS <= x + dx2; xS++ ){
-          for( int yS=y; yS <= y + dy2; yS++, indS++) {
-            if ( mask(xS, yS) >= 0){ 
-              s[indS]=seeds(xS, yS);
+        // loop over 2d2D and copy values into s
+        for( int xS=x; xS <= x + bwx; xS++ ){
+          for( int yS=y; yS <= y + bwy; yS++, indS++) {
+            if ( maskIn(xS, yS) >= 0){ 
+              s[indS]=seedsIn(xS, yS);
             } else {
               s[indS]=-1;
             }
@@ -905,15 +927,15 @@ SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
             res += (int) ::Rf_rbinom((double)(s[i]), sd2D[i]);
           }
         }
-        // copy resulting number of seds into dispSeeds(x,y)
-        dispSeeds(x, y) = res;
+        // copy resulting number of seds into output(x,y)
+        output(x, y) = res;
       }
-      // #### end if MASK <> NA
+      // #### end if MASKOut <> NA
     }
   }
   // END loop over seeds
   
-  return wrap( dispSeeds );
+  return( Rcpp::wrap( output ) );
 }
 #+END_SRC
 
@@ -945,19 +967,120 @@ Write vignette
 #+end_src
 
 #+results:
-: * checking for file './DESCRIPTION' ... OK
-: * preparing 'seedDisp':
+: * checking for file ‘./DESCRIPTION’ ... OK
+: * preparing ‘seedDisp’:
 : * checking DESCRIPTION meta-information ... OK
 : * cleaning src
 : * checking for LF line-endings in source and make files
 : * checking for empty or unneeded directories
-: Removed empty directory 'seedDisp/inst'
-: * building 'seedDisp_0.4-13.tar.gz'
+: Removed empty directory ‘seedDisp/inst’
+: * looking to see if a ‘data/datalist’ file should be added
+: * building ‘seedDisp_0.6-0.tar.gz’
 
 ** check package
 #+begin_src sh :results output
-  R CMD check --as-cran  seedDisp_0.4-13.tar.gz
+  R CMD check --as-cran  seedDisp_0.6-0.tar.gz
 #+end_src
+
+#+RESULTS:
+#+begin_example
+* using log directory ‘/Users/rainerkrug/Documents/Projects/R-Packages/AlienSpread/seedDisp/seedDisp.Rcheck’
+* using R version 3.2.3 (2015-12-10)
+* using platform: x86_64-apple-darwin15.2.0 (64-bit)
+* using session charset: UTF-8
+* using option ‘--as-cran’
+* checking for file ‘seedDisp/DESCRIPTION’ ... OK
+* checking extension type ... Package
+* this is package ‘seedDisp’ version ‘0.6-0’
+* checking CRAN incoming feasibility ... NOTE
+Maintainer: ‘Rainer M. Krug <Rainer@krugs.de>’
+New submission
+
+The Title field should be in title case, current version then in title case:
+‘Dispersal of seed routines’
+‘Dispersal of Seed Routines’
+* checking package namespace information ... OK
+* checking package dependencies ... NOTE
+  No repository set, so cyclic dependency check skipped
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... OK
+* checking for portable file names ... OK
+* checking for sufficient/correct file permissions ... OK
+* checking whether package ‘seedDisp’ can be installed ... OK
+* checking installed package size ... OK
+* checking package directory ... OK
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... NOTE
+Non-standard file/directory found at top level:
+  ‘README.org’
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... WARNING
+Subdirectory ‘data’ contains no data sets.
+* checking R files for non-ASCII characters ... OK
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the namespace can be loaded with stated dependencies ... OK
+* checking whether the namespace can be unloaded cleanly ... OK
+* checking loading without being on the library search path ... OK
+* checking use of S3 registration ... OK
+* checking dependencies in R code ... NOTE
+Namespaces in Imports field not imported from:
+  ‘Rcpp’ ‘rgrass7’ ‘sp’
+  All declared Imports should be used.
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... NOTE
+birdDispGRASS: no visible global function definition for ‘execGRASS’
+birdDispGRASS: no visible global function definition for ‘readRAST’
+birdDispGRASS: no visible global function definition for ‘writeRAST’
+localDispGRASS: no visible global function definition for ‘execGRASS’
+waterDispGRASS: no visible global function definition for ‘execGRASS’
+waterDispGRASS : oneStep: no visible global function definition for
+  ‘execGRASS’
+windDispGRASS: no visible global function definition for ‘execGRASS’
+windDispGRASS: no visible global function definition for ‘readRAST’
+windDispGRASS: no visible global function definition for
+  ‘gridparameters’
+windDispGRASS: no visible global function definition for ‘writeRAST’
+* checking Rd files ... OK
+* checking Rd metadata ... OK
+* checking Rd line widths ... NOTE
+Rd file 'waterDispGRASS.Rd':
+  \usage lines wider than 90 characters:
+     waterDispGRASS(input, output="waterDispSeeds", flowdir, depRates, zeroToNULL = TRUE, overwrite = FALSE)
+
+These lines will be truncated in the PDF manual.
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... OK
+* checking for code/documentation mismatches ... OK
+* checking Rd \usage sections ... OK
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking contents of ‘data’ directory ... WARNING
+Files not of a type allowed in a ‘data’ directory:
+  ‘MASK.rds’ ‘SD2D.rds’ ‘SEEDS.rds’
+Please use e.g. ‘inst/extdata’ for non-R data files
+* checking data for non-ASCII characters ... OK
+* checking data for ASCII and uncompressed saves ... OK
+* checking line endings in C/C++/Fortran sources/headers ... OK
+* checking line endings in Makefiles ... OK
+* checking compilation flags in Makevars ... OK
+* checking for GNU extensions in Makefiles ... OK
+* checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
+* checking compiled code ... OK
+* checking examples ... NONE
+* checking PDF version of manual ... OK
+* checking for code which exercises the package ... WARNING
+No examples, no tests, no vignettes
+* DONE
+Status: 3 WARNINGs, 6 NOTEs
+#+end_example
 
 
 

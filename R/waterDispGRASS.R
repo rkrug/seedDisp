@@ -50,6 +50,7 @@ waterDispGRASS <- function(
         ## calculation of sum of seeds left to be dispersed
         univ <- execGRASS("r.univar", map=stepInput, intern=TRUE)
         sm <- grep("sum", univ, value=TRUE)
+        paste("############", as.numeric(strsplit( sm, split=": " )[[1]][2]), "############")
         s <- as.numeric(strsplit( sm, split=": " )[[1]][2])
         if ( s <= 0 ) {
             return(FALSE)
@@ -126,8 +127,9 @@ waterDispGRASS <- function(
             
             ## and finally delete all temporary layers
             execGRASS(
-                "g.mremove",
-                rast = "_tmp.wd.*",
+                "g.remove",
+                type = "raster",
+                pattern = "_tmp.wd.*",
                 flags = "f"
                 )
             return(TRUE)
@@ -137,21 +139,24 @@ waterDispGRASS <- function(
     ## copy input in temporary input layer
     execGRASS(
         "g.copy",
-        rast = paste0(input, ",_tmp.wdout.input")
+        raster = paste0(input, ",_tmp.wdout.input")
         )
     ## create empty deposit layer
     execGRASS(
         "r.mapcalc",
         expression = "_tmp.wdout.dep.final = 0"
         )
-    while (oneStep("_tmp.wdout.input", "_tmp.wdout.dep", "_tmp.wdout.disp", flowdir, depRates)) {
-        univ <- execGRASS("r.univar", map="_tmp.wdout.input", intern=TRUE)
-        sm <- grep("sum", univ, value=TRUE)
-        paste("############", as.numeric(strsplit( sm, split=": " )[[1]][2]), "############")
+    while ( oneStep(
+        stepInput = "_tmp.wdout.input",
+        stepDep = "_tmp.wdout.dep",
+        stepToDisp = "_tmp.wdout.disp",
+        stepFlowdir = flowdir,
+        stepDepRates = depRates
+    ) ) {
         ## copy still to be dispersed seeds into temporary input layer
         execGRASS(
             "g.copy",
-            rast = "_tmp.wdout.disp,_tmp.wdout.input",
+            raster = "_tmp.wdout.disp,_tmp.wdout.input",
             flags = "overwrite"
             )
         ## add the deposited seeds to the final deposit layer
@@ -163,11 +168,11 @@ waterDispGRASS <- function(
         ## remove _tmp.wdout.dep
         execGRASS(
             "g.remove",
-            rast = "_tmp.wdout.dep",
+            type = "raster", 
+            name = "_tmp.wdout.dep",
             flags = "f"
             )
         ## and continue, i.e. execute oneStep() and repeat until oneStep returns FALSE
-        ## Then nothing needs to be done anymore
     }  
    
     ## set 0 values to null and write temporary layer to output layer
@@ -178,13 +183,14 @@ waterDispGRASS <- function(
         )
     execGRASS(
         "g.copy",
-        rast = paste0("_tmp.wdout.dep.final", ",", output),
+        raster = paste0("_tmp.wdout.dep.final", ",", output),
         flags = "overwrite"
         )
     ## and delete temporary layers
     execGRASS(
-        "g.mremove",
-        rast = "_tmp.wdout.*",
+        "g.remove",
+        type = "raster",
+        pattern = "_tmp.wdout.*",
         flags = "f"
         )
     ## if zeroToNULL

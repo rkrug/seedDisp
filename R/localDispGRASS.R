@@ -79,7 +79,9 @@ localDispGRASS <- function(
     ## remove tmp
     execGRASS(
         cmd = "g.remove",
-        rast = tmp
+        type = "raster",
+        name = tmp,
+        flags = "f"
         )
     ## if zeroToNULL
     if (zeroToNULL) {

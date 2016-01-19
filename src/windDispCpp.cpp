@@ -1,39 +1,46 @@
 // [[file:../seedDisp.org::*windDispCpp.cpp][windDispCpp\.cpp:1]]
 #include "windDispCpp.h"
   
-SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
+SEXP windDispCpp( 
+                 SEXP BWX, SEXP BWY, // width of buffering in x and y direction
+                 SEXP SD2D,          // seed dispersal kernel
+                 SEXP SEEDSin,       // buffered seed input matrix
+                 SEXP MASKin,        // buffered input mask
+                 SEXP MASKOut        // MASK for cells to return and template for return matrix
+ ){
   using namespace Rcpp;
   
   // The input parameter  
-  int dx2 = as<int>(DX2); // by reference or value?
-  int dy2 = as<int>(DY2);
-  NumericVector sd2D (SD2D); // by reference!
-  IntegerMatrix seeds (SEEDS);
-  IntegerMatrix mask (MASK);
+  int bwx = Rcpp::as<int>(BWX); // by reference or value?
+  int bwy = Rcpp::as<int>(BWY);
+  Rcpp::NumericVector sd2D     = Rcpp::clone<Rcpp::NumericVector>(SD2D); // by reference!
+  Rcpp::NumericMatrix seedsIn = Rcpp::clone<Rcpp::NumericMatrix>(SEEDSin);
+  Rcpp::NumericMatrix maskIn  = Rcpp::clone<Rcpp::NumericMatrix>(MASKin);
+  Rcpp::NumericMatrix maskOut     = Rcpp::clone<Rcpp::NumericMatrix>(MASKOut);
   
-  // result vector
-  IntegerMatrix dispSeeds = clone<IntegerMatrix>(mask);
-
+  // result matrix
+  Rcpp::NumericMatrix output = Rcpp::clone<Rcpp::NumericMatrix>(MASKOut);
+  std::fill(output.begin(), output.end(), 0); // just to make sure set all to 0
+  
   // internal variables
-  IntegerVector s (sd2D.size());
-  RNGScope scope;                 // N.B. Needed when calling random number generators
+  Rcpp::IntegerVector s(sd2D.size());
 
   int res; 
-  int nc = dispSeeds.ncol();
-  int nr = dispSeeds.nrow();
 
-  // BEGIN loop over seeds grid ("moving")
-  for( int y=0; y < nc; y++ ){
-    for( int x=0; x < nr; x++ ){
+  RNGScope scope;                 // N.B. Needed when calling random number generators
+
+  // BEGIN loop over output seeds grid ("moving")
+  for( int y=0; y < output.ncol(); y++ ){
+    for( int x=0; x < output.nrow(); x++ ){
       // if dispBEGIN loop over sd2D ("window")
-      // #### begin if MASK <> NA
-      if ( dispSeeds(x, y) >= 0 ) { 
+      // #### begin if MASKOut <> NA
+      if ( maskOut(x, y) >= 0 ) { 
         int indS = 0;
-        // loop ofer 2d2D and copy values into s
-        for( int xS=x; xS <= x + dx2; xS++ ){
-          for( int yS=y; yS <= y + dy2; yS++, indS++) {
-            if ( mask(xS, yS) >= 0){ 
-              s[indS]=seeds(xS, yS);
+        // loop over 2d2D and copy values into s
+        for( int xS=x; xS <= x + bwx; xS++ ){
+          for( int yS=y; yS <= y + bwy; yS++, indS++) {
+            if ( maskIn(xS, yS) >= 0){ 
+              s[indS]=seedsIn(xS, yS);
             } else {
               s[indS]=-1;
             }
@@ -46,14 +53,14 @@ SEXP windDispCpp( SEXP DX2, SEXP DY2, SEXP SD2D, SEXP SEEDS, SEXP MASK ){
             res += (int) ::Rf_rbinom((double)(s[i]), sd2D[i]);
           }
         }
-        // copy resulting number of seds into dispSeeds(x,y)
-        dispSeeds(x, y) = res;
+        // copy resulting number of seds into output(x,y)
+        output(x, y) = res;
       }
-      // #### end if MASK <> NA
+      // #### end if MASKOut <> NA
     }
   }
   // END loop over seeds
   
-  return wrap( dispSeeds );
+  return( Rcpp::wrap( output ) );
 }
 // windDispCpp\.cpp:1 ends here

@@ -6,8 +6,8 @@
 ##' \tabular{ll}{
 ##' Package: \tab seedDisp\cr
 ##' Type: \tab Package\cr
-##' Version: \tab 0.5-2\cr
-##' Date: \tab 2016-01-12_13-27\cr
+##' Version: \tab 0.6-0\cr
+##' Date: \tab 2016-01-19_14-15\cr
 ##' License: \tab GPL (>= 2)\cr
 ##' LazyLoad: \tab yes\cr
 ##' }

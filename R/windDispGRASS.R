@@ -29,7 +29,7 @@ windDispGRASS <- function(
     ) {
     if ( length( execGRASS("g.list", type="rast", pattern=output, intern=TRUE) ) & !overwrite ) {
         stop(paste("Layer", output, "exists! Please specify 'overwrite=TRUE' or use different output name!"))
-    } 
+    }
     ##
     seeds <- readRAST(
         c(
@@ -38,17 +38,17 @@ windDispGRASS <- function(
             ),
         NODATA=-1
         )
-    ## seeds.m <- sgdfToMatrix(seeds, 1)
+    ##
     seeds.m <- matrix(
         seeds[[1]],
         nrow=gridparameters(seeds)$cells.dim[1],
         ncol=gridparameters(seeds)$cells.dim[2])
-    ## mask.m <- sgdfToMatrix(seeds, 2)
+    ##
     mask.m <- matrix(
         seeds[[2]],
         nrow=gridparameters(seeds)$cells.dim[1],
         ncol=gridparameters(seeds)$cells.dim[2])
-    
+    ##
     dispSeeds.m <- windDisp(
         SD2D = SD2D,
         SEEDS = seeds.m,
